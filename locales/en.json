@@ -1,0 +1,25 @@
+{
+  "_meta": { "locale": "en", "keyed_by": "coa.code", "source": "config/coa.yaml (canonical)" },
+  "coa": {
+    "10000": "Cash and cash equivalents",
+    "11000": "Trade and other receivables",
+    "12000": "Prepayments",
+    "14000": "Property, plant and equipment",
+    "14500": "Intangible assets",
+    "20000": "Trade and other payables",
+    "21000": "Accrued expenses",
+    "21500": "Customer escrow payable",
+    "24000": "Lease liabilities",
+    "30000": "Contributed capital",
+    "31000": "Retained earnings",
+    "40000": "Service / fee revenue",
+    "50000": "Cost of services",
+    "60000": "Staff costs",
+    "61000": "Marketing and advertising",
+    "62000": "General and administrative",
+    "63000": "Depreciation and amortisation",
+    "70000": "Finance income",
+    "71000": "Finance costs",
+    "80000": "Income tax expense"
+  }
+}

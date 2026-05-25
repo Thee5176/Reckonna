@@ -1,0 +1,35 @@
+{
+  "model": "claude-opus-4-7",
+  "permissions": {
+    "allow": ["Bash(go:*)", "Bash(make:*)", "Bash(sqlc:*)", "Bash(migrate:*)", "Bash(golangci-lint:*)",
+              "Bash(npm:*)", "Bash(npx:*)", "Bash(terraform plan:*)", "Bash(terraform validate:*)",
+              "Bash(kubectl get:*)", "Bash(ruflo:*)", "Bash(graphify:*)", "Bash(sonar-scanner:*)",
+              "Bash(vault kv get:*)", "Bash(git commit:*)", "Bash(git diff:*)", "Bash(git log:*)",
+              "Edit(./internal/**)", "Edit(./cmd/**)", "Edit(./db/**)",
+              "Edit(./app/**)", "Edit(./components/**)", "Edit(./e2e/**)", "Edit(./design/**)",
+              "Edit(./infra/**)", "Edit(./plans/**)"],
+    "deny": ["Read(./**/.env)", "Read(./**/.env.*)", "Read(./**/secrets/**)", "Read(./**/*.tfvars)",
+             "Bash(printenv)", "Bash(env)", "Bash(terraform apply:*)", "Bash(kubectl delete:*)"]
+  },
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command",
+        "command": "echo \"CLAUDE_FEATURE=$(ls -t plans/*.md 2>/dev/null | grep -v impl | head -1 | xargs -r basename | sed 's/.md$//')\" >> \"$CLAUDE_ENV_FILE\"" }] }
+    ],
+    "UserPromptSubmit": [ { "hooks": [{ "type": "command", "command": ".claude/hooks/require-plan.sh" }] } ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": ".claude/hooks/require-prereq.sh" },
+        { "type": "command", "command": ".claude/hooks/no-secrets.sh" }
+      ]}
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": ".claude/hooks/verify-go.sh" },
+        { "type": "command", "command": ".claude/hooks/verify-frontend.sh" },
+        { "type": "command", "command": ".claude/hooks/verify-infra.sh" }
+      ]}
+    ],
+    "SubagentStop": [ { "hooks": [{ "type": "command", "command": ".claude/hooks/sonar-quality-gate.sh" }] } ]
+  }
+}

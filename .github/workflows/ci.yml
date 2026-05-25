@@ -1,0 +1,88 @@
+# PROPOSED CI workflow (plan 00 S9). The security_reminder_hook gates direct writes to
+# .github/workflows/** for injection review — this is injection-safe (no github.event.* in any run:
+# step; only env/vars/secrets). Review, then place it:
+#     mv docs/ci-workflow.proposed.yml .github/workflows/ci.yml
+# ---------------------------------------------------------------------------------------------------
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# No literal secrets. CI auth to Vault via AppRole; only the AppRole bootstrap creds live as GH secrets.
+env:
+  GO_VERSION: "1.23"
+  NODE_VERSION: "20"
+
+jobs:
+  backend:
+    name: Go build · test -race · lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - run: go build ./...
+      - run: go test ./... -race
+      - uses: golangci/golangci-lint-action@v6
+        with: { version: v1.62.2 }
+
+  frontend:
+    name: Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - run: npm ci || npm install
+      - run: npm test -- --watchAll=false --passWithNoTests
+
+  e2e:
+    name: E2E (testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - run: go test -tags e2e ./e2e/... -count=1
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.9.8" }
+      - run: terraform -chdir=infra init -backend=false
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra validate
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  sonar:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fetch Sonar token from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ vars.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/data/ci/sonar token | SONAR_TOKEN
+      - uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}

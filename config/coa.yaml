@@ -1,0 +1,41 @@
+# Chart of Accounts — canonical master (v1)
+# GENERATED to conform to doc/coa-governance-standard.md (THE standard). 5-digit gapped codes per §4;
+# framework-neutral names per §5; attributes per §6. English name is canonical; display names per
+# locale in locales/<lang>.json keyed by code. Currency is a DIMENSION (P2), NOT on the account.
+# Seed comes from the standard's Appendix starter ranges. Extend within §4 ranges, leaving gaps.
+version: 1
+generated_from: doc/coa-governance-standard.md
+accounts:
+  # ── Current assets (10000–13999) · Debit ──
+  - { code: 10000, name: "Cash and cash equivalents",   type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
+  - { code: 11000, name: "Trade and other receivables", type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
+  - { code: 12000, name: "Prepayments",                 type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
+  # ── Non-current assets (14000–19999) · Debit ──
+  - { code: 14000, name: "Property, plant and equipment", type: asset,   normal_balance: debit,  current_noncurrent: non_current, postable: true, status: active }
+  - { code: 14500, name: "Intangible assets",           type: asset,     normal_balance: debit,  current_noncurrent: non_current, postable: true, status: active }
+  # ── Current liabilities (20000–23999) · Credit ──
+  - { code: 20000, name: "Trade and other payables",    type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active }
+  - { code: 21000, name: "Accrued expenses",            type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active }
+  - { code: 21500, name: "Customer escrow payable",     type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active, required_dimensions: [counterparty] }
+  # ── Non-current liabilities (24000–29999) · Credit ──
+  - { code: 24000, name: "Lease liabilities",           type: liability, normal_balance: credit, current_noncurrent: non_current, postable: true, status: active }
+  # ── Equity (30000–39999) · Credit ──
+  - { code: 30000, name: "Contributed capital",         type: equity,    normal_balance: credit, postable: true, status: active }
+  - { code: 31000, name: "Retained earnings",           type: equity,    normal_balance: credit, postable: true, status: active }
+  # ── Income / revenue (40000–49999) · Credit ──
+  - { code: 40000, name: "Service / fee revenue",       type: income,    normal_balance: credit, postable: true, status: active }
+  # ── Cost of sales (50000–59999) · Debit ──
+  - { code: 50000, name: "Cost of services",            type: expense,   normal_balance: debit,  postable: true, status: active }
+  # ── Operating expenses (60000–69999) · Debit ──
+  - { code: 60000, name: "Staff costs",                 type: expense,   normal_balance: debit,  postable: true, status: active }
+  - { code: 61000, name: "Marketing and advertising",   type: expense,   normal_balance: debit,  postable: true, status: active }
+  - { code: 62000, name: "General and administrative",  type: expense,   normal_balance: debit,  postable: true, status: active }
+  - { code: 63000, name: "Depreciation and amortisation", type: expense, normal_balance: debit,  postable: true, status: active }
+  # ── Other income & finance items (70000–79999) ──
+  - { code: 70000, name: "Finance income",              type: income,    normal_balance: credit, postable: true, status: active }
+  - { code: 71000, name: "Finance costs",               type: expense,   normal_balance: debit,  postable: true, status: active }
+  # ── Income tax (80000–89999) ──
+  - { code: 80000, name: "Income tax expense",          type: expense,   normal_balance: debit,  postable: true, status: active }
+
+# Dimensions are defined separately (not on accounts). v1 dimension types: entity, currency, counterparty.
+# See doc/coa-governance-standard.md §7 and config/dimensions.yaml (plan 01).
