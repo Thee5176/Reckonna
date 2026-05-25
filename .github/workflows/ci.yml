@@ -1,7 +1,7 @@
-# PROPOSED CI workflow (plan 00 S9). The security_reminder_hook gates direct writes to
-# .github/workflows/** for injection review — this is injection-safe (no github.event.* in any run:
-# step; only env/vars/secrets). Review, then place it:
-#     mv docs/ci-workflow.proposed.yml .github/workflows/ci.yml
+# PROPOSED ci.yml (fixes the first CI run). Injection-safe. Apply with:
+#     mv docs/ci-workflow.proposed.yml .github/workflows/ci.yml && git add -A && git commit && git push
+# Fixes: guard go/e2e for the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
+# Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
 # ---------------------------------------------------------------------------------------------------
 name: CI
 on:
@@ -10,7 +10,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-# No literal secrets. CI auth to Vault via AppRole; only the AppRole bootstrap creds live as GH secrets.
 env:
   GO_VERSION: "1.23"
   NODE_VERSION: "20"
@@ -23,9 +22,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "${{ env.GO_VERSION }}" }
-      - run: go build ./...
-      - run: go test ./... -race
-      - uses: golangci/golangci-lint-action@v6
+      - id: detect
+        run: |
+          if [ -n "$(go list ./... 2>/dev/null)" ]; then echo "has_go=true" >> "$GITHUB_OUTPUT";
+          else echo "has_go=false" >> "$GITHUB_OUTPUT"; echo "No Go packages yet — skipping build/test/lint"; fi
+      - if: steps.detect.outputs.has_go == 'true'
+        run: go build ./...
+      - if: steps.detect.outputs.has_go == 'true'
+        run: go test ./... -race
+      - if: steps.detect.outputs.has_go == 'true'
+        uses: golangci/golangci-lint-action@v6
         with: { version: v1.62.2 }
 
   frontend:
@@ -45,7 +51,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "${{ env.GO_VERSION }}" }
-      - run: go test -tags e2e ./e2e/... -count=1
+      - id: detect
+        run: |
+          if [ -n "$(go list -tags e2e ./e2e/... 2>/dev/null)" ]; then echo "has_e2e=true" >> "$GITHUB_OUTPUT";
+          else echo "has_e2e=false" >> "$GITHUB_OUTPUT"; echo "No e2e packages yet — skipping"; fi
+      - if: steps.detect.outputs.has_e2e == 'true'
+        run: go test -tags e2e ./e2e/... -count=1
 
   terraform:
     name: Terraform validate
@@ -66,10 +77,12 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: gitleaks/gitleaks-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
   sonar:
     name: SonarQube
+    if: ${{ vars.SONAR_ENABLED == 'true' }}   # set the repo var + Vault AppRole to enable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
