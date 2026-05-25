@@ -4,10 +4,16 @@ Enforces the rules `.claude/skills/git-workflow` assumes. Apply once, on `Thee51
 `gh` is not installed in the dev container by default — install it (`gh` is in the toolchain) or use the
 GitHub UI steps. These are **human-applied** (admin scope), like `terraform apply`.
 
+> ✅ **APPLIED 2026-05-25** on `main` + `develop` via the API: strict required checks (the 5 display
+> names below), `required_linear_history`, no force-push, no deletions, `enforce_admins=false`,
+> `required_approving_review_count=0` (solo). Repo: rebase-merge only, auto-delete head branches.
+> `SonarQube` is intentionally NOT required (gated behind the `SONAR_ENABLED` repo var).
+
 ## Rules (both `main` and `develop`)
 - Require a pull request before merging — **no direct commits**.
-- Require review approval (the `code-reviewer` MERGE gate / 1 human approval).
-- Require status checks to pass (the CI jobs): `backend`, `frontend`, `e2e`, `terraform`, `gitleaks`, `sonar`.
+- Require a review: teams = 1 approval; **solo = 0** (GitHub blocks self-approval) — rely on CI + the `code-reviewer` agent gate.
+- Require status checks (job **display names**): `Go build · test -race · lint`, `Jest`,
+  `E2E (testcontainers)`, `Terraform validate`, `gitleaks (secret scan)`. (`SonarQube` added once enabled.)
 - Require branches up to date before merge.
 - **Block force-pushes** and **block deletions**.
 - Require linear history (we **rebase-merge**, never squash across steps).
