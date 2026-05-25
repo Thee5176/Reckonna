@@ -1,0 +1,49 @@
+{
+  // Reckonna — Accounting CQRS monorepo devcontainer.
+  // Reusable across all three domains: Go/Gin backend, RN/Expo frontend, Terraform/k8s infra.
+  // Pins owned by plan 00 (00-bootstrap-deps-vault.md). Secrets NEVER baked — Vault only.
+  "name": "Reckonna · Accounting CQRS (Go · RN/Expo · Terraform)",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/go:1":                       { "version": "1.23" },
+    "ghcr.io/devcontainers/features/node:1":                     { "version": "20" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2":         { "version": "latest" },
+    "ghcr.io/devcontainers/features/terraform:1":                { "version": "1.9", "tflint": "latest" },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1":    { "version": "latest", "minikube": "none" }
+  },
+
+  // Addresses, not secrets. VAULT_ADDR comes from the host env; never committed.
+  // Vault auth (role-id/secret-id, OIDC) is fetched at runtime, never here.
+  "containerEnv": {
+    "VAULT_ADDR": "${localEnv:VAULT_ADDR}",
+    "CGO_ENABLED": "1",
+    "GOFLAGS": "-mod=mod"
+  },
+
+  // command 8080 · query 8081 · postgres 5432 · vault dev 8200 · expo 8081/19000 · metro 8081
+  "forwardPorts": [8080, 8081, 5432, 8200, 19000, 19006],
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "42crunch.vscode-openapi",
+        "esbenp.prettier-vscode",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "go.lintTool": "golangci-lint",
+        "go.toolsManagement.checkForUpdates": "off",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}
