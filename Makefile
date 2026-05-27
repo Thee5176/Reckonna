@@ -16,7 +16,7 @@ gen-coa: ## Generate CoA seed + locale stubs from config/coa.yaml (validates vs 
 	@go run ./scripts/gen-coa 2>/dev/null || echo "gen-coa: stub — implement in plan 01 S5a"
 
 generate: ## sqlc codegen + CoA generation
-	@sqlc generate
+	@if compgen -G "db/query/*.sql" >/dev/null; then sqlc generate; else echo "generate: no db/query/*.sql yet — skipping sqlc (plan 01)"; fi
 	@$(MAKE) gen-coa
 
 migrate: ## Apply DB migrations (up)
@@ -26,13 +26,13 @@ migrate-down: ## Roll back one migration
 	@migrate -path db/migration -database "$(MIGRATE_DB_URL)" down 1
 
 test: ## Run all Go tests with race detector
-	@go test ./... -race
+	@if [ -n "$$(go list ./... 2>/dev/null)" ]; then go test ./... -race; else echo "test: no Go packages yet — skipping (plan 01)"; fi
 
 lint: ## Run golangci-lint
 	@golangci-lint run
 
 build: ## Build command + query services
-	@go build ./...
+	@if [ -n "$$(go list ./... 2>/dev/null)" ]; then go build ./...; else echo "build: no Go packages yet — skipping (plan 01)"; fi
 
 up: ## Start local stack (postgres + services)
 	@$(COMPOSE) up -d
