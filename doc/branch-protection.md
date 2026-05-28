@@ -4,9 +4,10 @@ Enforces the rules `.claude/skills/git-workflow` assumes. Apply once, on `Thee51
 `gh` is not installed in the dev container by default — install it (`gh` is in the toolchain) or use the
 GitHub UI steps. These are **human-applied** (admin scope), like `terraform apply`.
 
-> ✅ **APPLIED 2026-05-25** on `main` + `develop` via the API: strict required checks (the 5 display
-> names below), `required_linear_history`, no force-push, no deletions, `enforce_admins=false`,
-> `required_approving_review_count=0` (solo). Repo: rebase-merge only, auto-delete head branches.
+> ✅ **APPLIED 2026-05-25, RE-ENFORCED 2026-05-28** on `main` + `develop` via the API:
+> strict required checks (the 5 display names below), `required_linear_history`, no force-push,
+> no deletions, `enforce_admins=false`, `required_approving_review_count=0` (solo).
+> Repo: rebase-merge only, auto-delete head branches.
 > `SonarQube` is intentionally NOT required (gated behind the `SONAR_ENABLED` repo var).
 
 ## Rules (both `main` and `develop`)
@@ -20,24 +21,40 @@ GitHub UI steps. These are **human-applied** (admin scope), like `terraform appl
 - `main` additionally: restrict who can merge (release PRs only).
 
 ## Via `gh` (after `gh auth login`)
+
+Status-check contexts MUST match the CI job DISPLAY NAMES (the `name:` field in
+`.github/workflows/ci.yml`), not the job IDs. The names below are the live values
+currently enforced on `main` and `develop`.
+
 ```bash
 REPO=Thee5176/Reckonnna
+PAYLOAD='{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "Go build · test -race · lint",
+      "Jest",
+      "E2E (testcontainers)",
+      "Terraform validate",
+      "gitleaks (secret scan)"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 0,
+    "dismiss_stale_reviews": false,
+    "require_code_owner_reviews": false
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": true,
+  "required_conversation_resolution": false
+}'
 for BR in main develop; do
   gh api -X PUT "repos/$REPO/branches/$BR/protection" \
     -H "Accept: application/vnd.github+json" \
-    -f 'required_pull_request_reviews[required_approving_review_count]=1' \
-    -f 'required_status_checks[strict]=true' \
-    -f 'required_status_checks[contexts][]=backend' \
-    -f 'required_status_checks[contexts][]=frontend' \
-    -f 'required_status_checks[contexts][]=e2e' \
-    -f 'required_status_checks[contexts][]=terraform' \
-    -f 'required_status_checks[contexts][]=gitleaks' \
-    -f 'required_status_checks[contexts][]=sonar' \
-    -F 'enforce_admins=true' \
-    -F 'restrictions=null' \
-    -F 'allow_force_pushes=false' \
-    -F 'allow_deletions=false' \
-    -F 'required_linear_history=true'
+    --input - <<< "$PAYLOAD"
 done
 # Repo merge settings: enable rebase-merge only, auto-delete head branches
 gh api -X PATCH "repos/$REPO" \
