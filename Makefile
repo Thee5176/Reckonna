@@ -4,10 +4,11 @@ SHELL := /usr/bin/env bash
 COMPOSE ?= docker compose
 MIGRATE_DB_URL ?= $(DATABASE_URL)   # rendered from Vault (vault agent / direnv) — never hardcoded
 
-.PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci
+.PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci \
+        k8s-validate tf-validate pg-endpoint tailnet-smoke
 
 help: ## List targets
-	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 tools-verify: ## Validate toolchain + deps against pinned versions
 	@bash scripts/deps-check.sh
@@ -46,4 +47,25 @@ docs: ## Generate API + ERD docs (openapi served at /docs; tbls schema docs)
 docs-verify: ## Anti-drift: openapi lints + ERD matches schema
 	@command -v tbls >/dev/null && tbls diff || echo "docs-verify: tbls not installed (CI gate)"
 
-ci: tools-verify build test lint ## Local mirror of the CI gates
+ci: tools-verify build test lint k8s-validate tf-validate ## Local mirror of the CI gates
+
+k8s-validate: ## kubeconform -strict on every infra/k8s manifest (skips when tool absent)
+	@if command -v kubeconform >/dev/null 2>&1; then \
+	  find infra/k8s -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 \
+	    | xargs -0 -r kubeconform -strict -ignore-missing-schemas; \
+	else \
+	  echo "k8s-validate: kubeconform not installed — skipping (CI gate)"; \
+	fi
+
+tf-validate: ## terraform fmt + validate on infra/ (skips when tool absent)
+	@if command -v terraform >/dev/null 2>&1; then \
+	  cd infra && terraform fmt -recursive -check && terraform init -backend=false -input=false >/dev/null && terraform validate; \
+	else \
+	  echo "tf-validate: terraform not installed — skipping (CI gate)"; \
+	fi
+
+pg-endpoint: ## Resolve Postgres tailnet endpoint (hostname + IP)
+	@bash scripts/pg-endpoint.sh
+
+tailnet-smoke: ## Non-destructive 'SELECT 1' against the tailnet PG endpoint
+	@bash scripts/tailnet-smoke.sh
