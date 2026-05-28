@@ -28,3 +28,5 @@ coverage.out
 # --- Tooling / generated ---
 graphify-out/
 .claude-flow/
+.claude/worktrees/
+.gstack/
