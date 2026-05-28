@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-postgres
+  namespace: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+  annotations:
+    # Tailscale Operator picks up these annotations and provisions a proxy pod
+    # in the 'tailscale' namespace that registers a MagicDNS device named
+    # 'pg-reckonna'. Reachable only by machines that joined our tailnet.
+    # No DNS leak, no public route.
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: "pg-reckonna"
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
