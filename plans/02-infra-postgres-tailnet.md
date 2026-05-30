@@ -1,6 +1,8 @@
 # Plan 02 — Postgres on Kubernetes, Exposed via Tailscale (Tailnet-Only)
 
-status: draft  <!-- flip to `status: approved` after human review; require-prereq.sh greps this -->
+status: approved  <!-- require-prereq.sh greps this -->
+approved_by: thee5176
+approved_at: 2026-05-30
 
 **Source of truth** for deploying Postgres on the existing remote Kubernetes cluster and exposing
 its endpoint only to machines on our Tailscale tailnet. Closes the runtime-Vault gap deferred from
