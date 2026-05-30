@@ -13,12 +13,12 @@ resource "kubernetes_namespace" "postgres" {
   metadata {
     name = "postgres"
     labels = {
-      "app.kubernetes.io/name"                = "postgres"
-      "app.kubernetes.io/part-of"             = "reckonna"
-      "pod-security.kubernetes.io/enforce"    = "restricted"
-      "pod-security.kubernetes.io/audit"      = "restricted"
-      "pod-security.kubernetes.io/warn"       = "restricted"
-      "kubernetes.io/metadata.name"           = "postgres"
+      "app.kubernetes.io/name"             = "postgres"
+      "app.kubernetes.io/part-of"          = "reckonna"
+      "pod-security.kubernetes.io/enforce" = "restricted"
+      "pod-security.kubernetes.io/audit"   = "restricted"
+      "pod-security.kubernetes.io/warn"    = "restricted"
+      "kubernetes.io/metadata.name"        = "postgres"
     }
   }
 }
