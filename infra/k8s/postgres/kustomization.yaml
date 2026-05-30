@@ -4,8 +4,9 @@ namespace: postgres
 commonLabels:
   app.kubernetes.io/part-of: reckonna
   app.kubernetes.io/component: database
+# Namespace is owned by Terraform (infra/postgres.tf). kustomize does not declare it
+# to avoid `terraform apply` vs `kubectl apply -k` drift on labels/annotations.
 resources:
-  - namespace.yaml
   - serviceaccount.yaml
   - service.yaml
   - statefulset.yaml

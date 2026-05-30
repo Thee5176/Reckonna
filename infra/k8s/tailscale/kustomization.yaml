@@ -4,6 +4,7 @@ namespace: tailscale
 # The operator is installed via Helm (see operator-values.yaml). This kustomization
 # only carries the Vault-injected OAuth Secret manifest and any cluster-scoped
 # resources we want under Git control.
+# Namespace is owned by Terraform (infra/tailscale.tf). kustomize does not declare it
+# to avoid `terraform apply` vs `kubectl apply -k` drift on labels/annotations.
 resources:
-  - namespace.yaml
   - operator-oauth-secret.yaml

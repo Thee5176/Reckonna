@@ -5,6 +5,9 @@
 #
 # Terraform's job here is the cluster-level scaffolding (namespaces, RBAC
 # bindings, CRDs) that does not belong in kustomize bases.
+#
+# Single-owner contract: kustomize (infra/k8s/postgres/) deliberately does NOT
+# declare this Namespace — Terraform is the only writer.
 
 resource "kubernetes_namespace" "postgres" {
   metadata {
