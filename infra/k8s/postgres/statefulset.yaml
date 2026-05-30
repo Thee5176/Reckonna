@@ -60,14 +60,23 @@ spec:
           env:
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
+          # Probes source /vault/secrets/db.env so $POSTGRES_USER matches whatever
+          # Vault provisioned (not a hardcoded 'postgres'). Container exec does
+          # NOT inherit PID1's sourced env, so probes re-source the file.
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+              command:
+                - /bin/sh
+                - -c
+                - '. /vault/secrets/db.env && pg_isready -U "$POSTGRES_USER" -h 127.0.0.1'
             initialDelaySeconds: 10
             periodSeconds: 5
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+              command:
+                - /bin/sh
+                - -c
+                - '. /vault/secrets/db.env && pg_isready -U "$POSTGRES_USER" -h 127.0.0.1'
             initialDelaySeconds: 30
             periodSeconds: 10
           resources:
