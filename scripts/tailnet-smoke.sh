@@ -13,7 +13,12 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-HOST="$("$HERE/pg-endpoint.sh" --hostname)" || exit 2
+# `set -e` makes `HOST="$(...)" || exit 2` swallow command-substitution failures,
+# so the endpoint-failed exit code never fires. Split the assignment to preserve
+# the documented exit-2 contract.
+if ! HOST="$("$HERE/pg-endpoint.sh" --hostname)"; then
+  exit 2
+fi
 
 command -v vault >/dev/null 2>&1 || { echo "tailnet-smoke: vault CLI missing" >&2; exit 3; }
 command -v psql  >/dev/null 2>&1 || { echo "tailnet-smoke: psql missing" >&2; exit 3; }
