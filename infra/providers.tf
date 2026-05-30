@@ -23,5 +23,11 @@ provider "vault" {
 }
 
 provider "kubernetes" {
-  # kubeconfig from env / in-cluster — vendor-neutral, no cloud-specific auth here
+  # Default to the operator's local kubeconfig so `terraform plan/apply` from a
+  # workstation can authenticate against the homelab cluster. Without this the
+  # provider falls back to http://localhost:80 and fails refresh/apply.
+  # In-cluster (future) runs should override via KUBE_CONFIG_PATH or by
+  # configuring host/token/cluster_ca_certificate explicitly (e.g. IRSA-style
+  # service-account auth) — keep this vendor-neutral.
+  config_path = pathexpand("~/.kube/config")
 }
