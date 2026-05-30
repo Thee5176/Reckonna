@@ -30,6 +30,7 @@ graphify-out/
 .claude-flow/
 .claude/worktrees/
 .gstack/
+.scannerwork/
 
 # QG fixture artifacts
 tests/qualitygate/*/coverage.out
