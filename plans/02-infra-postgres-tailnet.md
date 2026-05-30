@@ -87,6 +87,7 @@ Each step compiles/validates on its own. RED tests are committed before the mani
 | S6 | `feat(scripts): pg-endpoint.sh + tailnet-smoke.sh` | `scripts/pg-endpoint.sh`, `scripts/tailnet-smoke.sh`, `tests/pg-endpoint_test.sh` | shellcheck; `tests/pg-endpoint_test.sh` |
 | S7 | `chore(make): k8s-validate, tf-validate, tailnet-smoke, pg-endpoint` | `Makefile` | `make help` lists targets; `make k8s-validate` skips cleanly when `kubeconform` missing |
 | S8 | `docs(infra): how to set up tailscale + connect to postgres` | `docs/postgres-tailnet.md` | manual review; markdownlint optional |
+| S9 | `feat(scripts): pg-probe.sh + docs app-integration section + make pg-probe` | `scripts/pg-probe.sh`, `tests/pg-probe_test.sh`, `docs/postgres-tailnet.md`, `Makefile` | `tests/pg-probe_test.sh`; `make help` lists `pg-probe`; shellcheck |
 
 ### Step notes
 
@@ -97,6 +98,7 @@ Each step compiles/validates on its own. RED tests are committed before the mani
 - **S6 — Endpoint script.** `scripts/pg-endpoint.sh` resolves the PG endpoint two ways: (a) `tailscale status --json | jq` for the `pg-reckonna` device (works from any tailnet host) and (b) `kubectl get service pg-postgres -n postgres -o jsonpath='{.metadata.annotations.tailscale\.com/hostname}'` (works from any kubeconfig). Prints both hostname (`pg-reckonna.<tailnet>.ts.net`) and IP. Tests use a fake `tailscale` shim in `PATH`.
 - **S7 — Makefile.** Targets skip cleanly when their tool is absent (CI installs them; dev boxes may not).
 - **S8 — Docs.** Diataxis how-to: prerequisites, mint Tailscale OAuth, store in Vault, install operator (operator side), client setup (tailscale up, MagicDNS), connect (psql, sqlc, migrate, GoLand, Beekeeper), troubleshooting, security model, off-tailnet behaviour.
+- **S9 — App-side verification.** Adds `scripts/pg-probe.sh` for application teams who already have credentials in their runtime env (no Vault CLI dependency). Probe reads libpq env vars (`PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`) and walks DNS → TCP → query, exiting with a stage-specific code (3 DNS / 4 TCP / 5 TLS / 6 AUTH / 7 DB / 8 query). Resolves DNS once and TCP-probes the resolved IP so the stage layers cleanly. Docs §2A documents per-stack driver call (pgx/psycopg/pg/pgjdbc/sqlx), headless tailnet onboarding via ephemeral auth keys, and the exit-code → fix table. `make pg-probe` wires it into the local CLI. Offline test stubs `psql` + `getent` and spins a throwaway TCP listener — no real PG and no network egress.
 
 ## Hand-off to the heads
 

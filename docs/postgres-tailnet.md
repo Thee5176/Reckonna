@@ -195,6 +195,122 @@ itself a managed enterprise secret store.
 
 ---
 
+## 2A. Application integration — use the endpoint from any stack
+
+The endpoint behaves like any TCP Postgres service once the host is on the
+tailnet. The integration recipe is identical regardless of language:
+
+1. **Resolve once at boot:** read `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`,
+   `PGDATABASE`, `PGSSLMODE` from the runtime env (rendered from Vault — see
+   §1.2). Treat them as immutable for the process lifetime.
+2. **Connect** by letting the driver pick up the libpq env vars implicitly.
+3. **Probe** with `scripts/pg-probe.sh` (or `make pg-probe`) before the app
+   opens its pool; the probe returns a stage-specific exit code instead of a
+   generic "connection failed".
+
+### 2A.1 Driver picks up libpq env vars
+
+Every mainstream Postgres driver honours the standard libpq env vars. Pass
+**no** URL and let the driver read `PG*` from the environment — the cleanest
+pattern, and the one `pg-probe.sh` assumes.
+
+| Stack  | Driver | Boot call |
+|--------|--------|-----------|
+| Go     | `pgx/v5`            | `pgxpool.ParseConfig("")` then `pgxpool.NewWithConfig(ctx, cfg)` |
+| Python | `psycopg[binary]>=3`| `psycopg.connect()` (no args) |
+| Node   | `pg`                | `new Client()` (no args) |
+| JVM    | `pgjdbc`            | `DriverManager.getConnection("jdbc:postgresql:/")` |
+| Rust   | `sqlx`              | `PgPoolOptions::new().connect_with(PgConnectOptions::new())` |
+
+If you must serialise an explicit URL (some CI/migration tools require it),
+build it from vault-sourced parts at runtime — never inline:
+
+```bash
+# vault sources every piece; nothing persists on disk
+DB_USER="$(vault kv get -mount=secret -field=username app/database)"
+DB_PASS="$(vault kv get -mount=secret -field=password app/database)"
+DB_NAME="$(vault kv get -mount=secret -field=dbname app/database)"
+DB_HOST="$(scripts/pg-endpoint.sh --hostname)"
+export DATABASE_URL="postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}?sslmode=prefer"
+```
+
+### 2A.2 PGSSLMODE choice
+
+- **`prefer`** (libpq default) — TLS if offered, else plaintext. Standard
+  for in-tailnet traffic since WireGuard already encrypts the wire.
+- **`require`** — TLS-only. Use when you want PG-layer TLS as
+  defence-in-depth. Pod needs a cert mounted from Vault PKI (later plan).
+- **`disable`** — explicit plaintext over the tailnet. Faster handshake,
+  acceptable because WireGuard provides confidentiality + integrity.
+
+### 2A.3 Headless / CI host onboarding
+
+A CI runner or background worker joins the tailnet with an **ephemeral,
+tagged auth key** instead of an interactive login. The key itself comes
+from vault at job start:
+
+```bash
+# vault sources the ephemeral key; nothing persists in the runner image
+TS_AUTHKEY="$(vault kv get -mount=secret -field=ephemeral_authkey app/tailscale/runner)"
+sudo tailscale up \
+  --authkey="$TS_AUTHKEY" \
+  --hostname="ci-$GITHUB_RUN_ID" \
+  --advertise-tags=tag:dev \
+  --accept-routes --accept-dns
+unset TS_AUTHKEY
+```
+
+Ephemeral devices auto-deregister at host shutdown, so a runaway runner does
+not litter the tailnet. The `tag:dev` advertisement makes the ACL grant of
+`tag:dev → tag:k8s:5432` apply.
+
+### 2A.4 Verify with `pg-probe`
+
+`scripts/pg-probe.sh` walks DNS → TCP → query in order and exits at the first
+failing stage with a code that maps one-to-one to the fix:
+
+| Exit | Stage | Likely fix |
+|------|-------|------------|
+| 0 | all OK | proceed |
+| 3 | DNS | host not on tailnet; `tailscale up` then retry |
+| 4 | TCP | ACL deny or NetworkPolicy block; check `tailscale netcheck` and the `tag:dev → tag:k8s:5432` rule |
+| 5 | TLS | server lacks cert or sslmode mismatch; try `PGSSLMODE=prefer` |
+| 6 | AUTH | bad credential; rotate via §5 then restart pod |
+| 7 | DB | `PGDATABASE` typo or wrong cluster |
+| 8 | query | server reachable but `SELECT 1` errored — inspect server logs |
+
+Run it before the app starts (initContainer / CI step / pre-deploy hook):
+
+```bash
+# vault sources every piece; nothing persists on disk
+export PGHOST="$(scripts/pg-endpoint.sh --hostname)"
+export PGUSER="$(vault kv get -mount=secret -field=username app/database)"
+export PGPASSWORD="$(vault kv get -mount=secret -field=password app/database)"
+export PGDATABASE="$(vault kv get -mount=secret -field=dbname app/database)"
+make pg-probe
+unset PGPASSWORD
+```
+
+In an in-cluster pod, the same env vars come from the Vault-injected
+`/vault/secrets/db.env`; the probe runs identically.
+
+### 2A.5 Example — Go service boot
+
+```go
+// internal/config/db.go — illustrative; no business logic.
+cfg, err := pgxpool.ParseConfig("")            // read PG* from env
+if err != nil { return fmt.Errorf("pg cfg: %w", err) }
+cfg.MaxConns = 20
+pool, err := pgxpool.NewWithConfig(ctx, cfg)
+if err != nil { return fmt.Errorf("pg dial: %w", err) }
+```
+
+The driver picks up `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`,
+`PGSSLMODE` automatically. No code needs to know the endpoint is on a
+tailnet — that is a deployment concern, not an application concern.
+
+---
+
 ## 3. Security model
 
 | Threat | Mitigation |
