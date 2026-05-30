@@ -85,12 +85,17 @@ jobs:
 
   sonar:
     name: SonarQube
-    if: ${{ vars.SONAR_ENABLED == 'true' }}   # set the repo var + Vault AppRole to enable
+    # Gate: set repo Variable SONAR_ENABLED=true once the CI AppRole exists in vault.
+    # Pre-reqs (configure in GitHub repo settings → Secrets and variables → Actions):
+    #   Variables: SONAR_ENABLED=true, VAULT_ADDR=https://vault.thee5176.com
+    #   Secrets:   VAULT_ROLE_ID, VAULT_SECRET_ID  (from CI-only AppRole `ci-reckonna`
+    #              with read scope on secret/data/homelab/sonar/ci-token only)
+    if: ${{ vars.SONAR_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: Fetch Sonar token from Vault
+      - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token)
         uses: hashicorp/vault-action@v3
         with:
           url: ${{ vars.VAULT_ADDR }}
@@ -98,7 +103,8 @@ jobs:
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets: |
-            secret/data/ci/sonar token | SONAR_TOKEN
+            secret/data/homelab/sonar/ci-token token | SONAR_TOKEN
       - uses: SonarSource/sonarqube-scan-action@v4
-        env:
+        env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonar.thee5176.com
