@@ -12,6 +12,8 @@ provider "tailscale" {
   api_key = data.vault_kv_secret_v2.tailscale_operator.data["api_key"]
 }
 
+# Single-owner contract: kustomize (infra/k8s/tailscale/) deliberately does NOT
+# declare this Namespace — Terraform is the only writer.
 resource "kubernetes_namespace" "tailscale" {
   metadata {
     name = "tailscale"
