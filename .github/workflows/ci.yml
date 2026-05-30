@@ -91,8 +91,14 @@ jobs:
     #   Variables: SONAR_ENABLED=true
     #   Secrets:   VAULT_ROLE_ID, VAULT_SECRET_ID  (from CI-only AppRole `ci-reckonna`
     #              with read scope on secret/data/homelab/sonar/ci-token only)
-    if: ${{ vars.SONAR_ENABLED == 'true' }}
+    # Only run on push OR same-repo PRs — never on fork PRs (untrusted code on self-hosted runner).
+    if: >-
+      ${{ vars.SONAR_ENABLED == 'true' &&
+          (github.event_name == 'push' ||
+           github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: [self-hosted, tailscale]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
