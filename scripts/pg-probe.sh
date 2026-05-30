@@ -20,7 +20,7 @@
 # Exit codes:
 #   0  all stages OK
 #   1  missing required env var or bad CLI argument
-#   2  command not on PATH (psql / getent / bash /dev/tcp)
+#   2  command not on PATH (psql / getent / timeout / bash /dev/tcp)
 #   3  DNS resolution failed     — tailnet device not visible; check `tailscale status`
 #   4  TCP connect failed         — ACL deny, NetworkPolicy block, or pod not Ready
 #   5  TLS handshake failed       — sslmode=require but server lacks cert
@@ -54,6 +54,7 @@ done
 
 command -v psql    >/dev/null 2>&1 || { echo "pg-probe: psql not on PATH" >&2; exit 2; }
 command -v getent  >/dev/null 2>&1 || { echo "pg-probe: getent not on PATH" >&2; exit 2; }
+command -v timeout >/dev/null 2>&1 || { echo "pg-probe: timeout not on PATH (need coreutils)" >&2; exit 2; }
 
 # Stage 1 — DNS. Skip when PGHOST is already an IP literal.
 RESOLVED_IP="$PGHOST"
