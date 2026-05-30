@@ -2,5 +2,5 @@ projectKey=reckonna
 serverUrl=https://sonar.thee5176.com
 serverVersion=26.5.0.122743
 dashboardUrl=https://sonar.thee5176.com/dashboard?id=reckonna
-ceTaskId=f3785f12-88e6-4e80-adec-6a3a438cce2f
-ceTaskUrl=https://sonar.thee5176.com/api/ce/task?id=f3785f12-88e6-4e80-adec-6a3a438cce2f
+ceTaskId=a0ecf0ff-2016-4e2c-9468-e81cd0f1296e
+ceTaskUrl=https://sonar.thee5176.com/api/ce/task?id=a0ecf0ff-2016-4e2c-9468-e81cd0f1296e
