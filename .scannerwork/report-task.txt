@@ -1,0 +1,6 @@
+projectKey=reckonna
+serverUrl=https://sonar.thee5176.com
+serverVersion=26.5.0.122743
+dashboardUrl=https://sonar.thee5176.com/dashboard?id=reckonna
+ceTaskId=a0ecf0ff-2016-4e2c-9468-e81cd0f1296e
+ceTaskUrl=https://sonar.thee5176.com/api/ce/task?id=a0ecf0ff-2016-4e2c-9468-e81cd0f1296e
