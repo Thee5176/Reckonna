@@ -9,15 +9,14 @@ data "vault_kv_secret_v2" "tailscale_operator" {
 provider "tailscale" {
   # OAuth client credentials from Vault (provider ~> 0.17 prefers OAuth over
   # raw api_key — tokens auto-rotate so we don't have to re-mint keys every
-  # 90 days). The same vault path stores client_id + client_secret alongside
-  # the legacy api_key; we read the OAuth pair here.
+  # 90 days). The api_key field at secret/data/app/tailscale/operator can be
+  # cleaned up in a later commit (out of scope here).
   #
   # The OAuth client used here MUST be minted with these scopes in the
-  # tailnet admin console:
-  #   - Policy File: write      (required for tailscale_acl.policy below)
-  #   - Devices: Core (write)   (operator device lifecycle)
-  #   - Auth Keys: write        (operator auth key minting)
-  # Tailnet defaults to the configured account when omitted.
+  # tailnet admin console (literal scope names as shown in the UI):
+  #   - policy_file:write   (required for tailscale_acl.policy below)
+  #   - devices:core:write  (operator device lifecycle)
+  #   - auth_keys:write     (operator auth key minting)
   oauth_client_id     = data.vault_kv_secret_v2.tailscale_operator.data["client_id"]     # vault
   oauth_client_secret = data.vault_kv_secret_v2.tailscale_operator.data["client_secret"] # vault
 }
