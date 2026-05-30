@@ -26,14 +26,21 @@ provider "vault" {
   # address + auth read from VAULT_ADDR / VAULT_TOKEN / AppRole env — see secrets-vault.md
 }
 
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig. Empty → in-cluster / provider env-var lookup (KUBE_CONFIG_PATH, KUBECONFIG)."
+  type        = string
+  default     = ""
+}
+
 provider "kubernetes" {
-  # Default to the operator's local kubeconfig so `terraform plan/apply` from a
-  # workstation can authenticate against the homelab cluster. Without this the
-  # provider falls back to http://localhost:80 and fails refresh/apply.
-  # In-cluster (future) runs should override via KUBE_CONFIG_PATH or by
-  # configuring host/token/cluster_ca_certificate explicitly (e.g. IRSA-style
-  # service-account auth) — keep this vendor-neutral.
-  config_path = pathexpand("~/.kube/config")
+  # Local dev (default): var.kubeconfig_path unset → fall back to
+  # pathexpand("~/.kube/config") so workstation runs Just Work and the
+  # provider doesn't drop to http://localhost:80.
+  # CI / in-cluster: set var.kubeconfig_path = "" AND unset $HOME (or run
+  # without a home dir) so config_path becomes null and the provider reads
+  # its standard env-var chain (KUBE_CONFIG_PATH / KUBECONFIG) or the
+  # in-cluster service-account token. Keeps this vendor-neutral.
+  config_path = var.kubeconfig_path != "" ? var.kubeconfig_path : try(pathexpand("~/.kube/config"), null)
 }
 
 # GitHub provider — owner fixed; token supplied via the GITHUB_TOKEN env var,
