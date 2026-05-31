@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: otel
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: telemetry
+spec:
+  # Headless service — workloads send to $(NODE_IP):4317 via the downward API
+  # so traffic stays local to the node and never hops to a different pod.
+  # This service exists ONLY for in-cluster DNS discovery + kubectl exec.
+  clusterIP: None
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: telemetry

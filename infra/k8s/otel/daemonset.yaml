@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: otel
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: telemetry
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+      app.kubernetes.io/component: telemetry
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector
+        app.kubernetes.io/component: telemetry
+      annotations:
+        # ── Vault Agent Injector ─────────────────────────────────────────────
+        # Renders OTEL_EXPORTER_OTLP_ENDPOINT (e.g. otlp.backend.example:443)
+        # and OTEL_EXPORTER_OTLP_HEADERS (e.g. "Bearer <api_key>") into
+        # /vault/secrets/otel.env at pod start. No literal endpoint or token
+        # lives in this manifest. The Vault role 'reckonna-otel-collector'
+        # must grant read on 'secret/data/app/otel/exporter'.
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/role: "reckonna-otel-collector"
+        vault.hashicorp.com/agent-inject-secret-otel.env: "secret/data/app/otel/exporter"
+        vault.hashicorp.com/agent-inject-template-otel.env: |
+          {{- with secret "secret/data/app/otel/exporter" -}}
+          export OTEL_EXPORTER_OTLP_ENDPOINT="{{ .Data.data.endpoint }}"
+          export OTEL_EXPORTER_OTLP_HEADERS="Bearer {{ .Data.data.api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: collector
+      # hostNetwork makes $(NODE_IP):4317 reachable from every workload pod on
+      # the node without a sidecar or service hop. dnsPolicy must switch to
+      # ClusterFirstWithHostNet so the agent can still resolve in-cluster
+      # services (Vault, external exporter via CoreDNS, etc.) while sharing
+      # the host network namespace.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: collector
+          image: otel/opentelemetry-collector:0.108.0
+          imagePullPolicy: IfNotPresent
+          # Source the vault-rendered env file (OTEL_EXPORTER_OTLP_ENDPOINT +
+          # _HEADERS) before exec'ing the collector. ${env:...} substitution
+          # in the config picks them up. No secrets in process args.
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              . /vault/secrets/otel.env
+              exec /otelcol --config /etc/otel/config.yaml
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              hostPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              hostPort: 4318
+              protocol: TCP
+          env:
+            # Workloads use this NODE_IP via the downward API to point their
+            # OTLP SDK at the local collector. Surfaced here for symmetry +
+            # the otel-smoke script.
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "200Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector
+            items:
+              - key: config.yaml
+                path: config.yaml
+        - name: tmp
+          emptyDir: {}
