@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: cache
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only the Tailscale Operator's proxy pods (in the 'tailscale' namespace)
+    # are allowed to reach Redis on 6379. Tailnet-side ACLs gate WHO can
+    # reach the proxy in the first place.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tailscale
+      ports:
+        - protocol: TCP
+          port: 6379
+  egress:
+    # DNS to kube-dns.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Vault Agent talks to the Vault server during init.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: vault
+      ports:
+        - protocol: TCP
+          port: 8200
