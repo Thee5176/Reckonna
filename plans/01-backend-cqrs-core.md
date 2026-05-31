@@ -155,6 +155,8 @@ Source `Ledgers`→ **JournalEntry** (header: date, description, owner, book=bas
 | AT12 | Given the running service / When GET /docs / Then Swagger UI renders from api/openapi.yaml                    | e2e/docs_served.e2e_test.go              |
 | AT13 | Given currency dimension / When POST single-currency USD entry (debit 1000 + credit 1000 USD) / Then 201, balanced | e2e/entry_currency_dim.e2e_test.go |
 | AT14 | Given lines with mixed currencies in one entry / When POST / Then 422 (v1: entry must be single-currency)    | e2e/entry_mixed_currency.e2e_test.go     |
+| AT15 | Given Swagger UI at /docs / When user pastes valid JWT into Authorize widget + runs "Try it out" on POST /command/ledgers with the embedded request example / Then 201 with response example schema | e2e/docs_interactive.e2e_test.go (chromedp headless) |
+| AT16 | Given api/collections/ (Bruno or .http) generated from openapi.yaml / When CI runs every request once against the e2e stack / Then every collection request returns its documented 2xx (interactive parity with browser Try-it-out) | e2e/collection_runner.e2e_test.go |
 
 ## Section 2 — Integration-test spec   [from architecture / CQRS contracts]
 
@@ -174,6 +176,9 @@ Source `Ledgers`→ **JournalEntry** (header: date, description, owner, book=bas
 | IT12| a journal line missing a required dimension (counterparty on 21500) is rejected (422)                 | internal/handler/dimension_required_test.go|
 | IT13| balance trigger validates Σ debit = Σ credit per (entry, book); a mixed-currency entry is rejected     | internal/repository/book_balance_test.go   |
 | IT14| every `config/coa.yaml` code has a translation in each shipped locale (en, ja)                         | internal/config/i18n_coverage_test.go      |
+| IT15| every operation in `api/openapi.yaml` ships a request `example` AND an `example` for every documented response code — Swagger UI Try-it-out is never blank | internal/handler/openapi_examples_test.go  |
+| IT16| `api/collections/` (Bruno or .http) is regenerated from `api/openapi.yaml` and checked in; CI fails if generator drift detected (`make collections-verify`) | internal/handler/collections_drift_test.go |
+| IT17| e2e harness boots in <30s on CI (testcontainers Postgres + Keycloak mock + command + query) — perf budget so the e2e job stays usable | e2e/harness_perf_test.go                   |
 
 ## Section 3 — Implementation steps (one commit each; unit test per step)
 
@@ -201,12 +206,16 @@ failing-test commit BEFORE code commit for domain/money/auth paths. Every commit
 | S14 | `feat(query): profit-loss statement aggregate`               | internal/query/statement_query.go, internal/handler/statement.go    | S13          | TestProfitLoss (AT7, IT7)               |
 | S15 | `feat(cmd): wire command + query Gin routers + config`        | cmd/command/main.go, cmd/query/main.go, internal/config/config.go   | S9,S14       | boots; health 200; readonly_test (IT9)  |
 | S16 | `feat(obs): OTel spans on command + query handlers`          | internal/config/otel.go, internal/handler/ledger_command.go         | S15          | span emitted on PostLedger (devops Done)|
-| S17 | `test(contract): OpenAPI-validated contract + e2e suite`     | internal/handler/contract_test.go, e2e/*.e2e_test.go               | S15,S18      | all AT/IT green (testcontainers-go)     |
-| S18 | `feat(api): openapi.yaml contract + oapi-codegen types`      | api/openapi.yaml, internal/handler/oapi_gen.go                      | S8           | spec lints; coverage test (IT6, IT11)   |
-| S19 | `feat(api): serve Swagger UI at /docs from openapi.yaml`     | internal/handler/docs.go, cmd/command/main.go, cmd/query/main.go    | S18          | GET /docs 200 (AT12)                     |
+| S17a| `test(e2e): harness — testcontainers Postgres + Keycloak mock + JWT minter + spec-validator helper` | e2e/harness/stack.go, e2e/harness/jwt.go, e2e/harness/spec_oracle.go | S15,S18      | harness_smoke_test (IT17 boot budget)   |
+| S17b| `test(contract,e2e): AT1–AT14 + IT6 contract test (response auto-validated vs openapi.yaml)`     | internal/handler/contract_test.go, e2e/*.e2e_test.go               | S17a         | all AT/IT green                         |
+| S18 | `feat(api): openapi.yaml contract + oapi-codegen types + bearerAuth + per-op examples` | api/openapi.yaml, internal/handler/oapi_gen.go            | S8           | spec lints; IT6, IT11, IT15 (examples)  |
+| S19 | `feat(api): serve Swagger UI at /docs from openapi.yaml (with bearerAuth widget)`     | internal/handler/docs.go, cmd/command/main.go, cmd/query/main.go    | S18          | GET /docs 200 (AT12); AT15 interactive  |
+| S19a| `feat(api): generate Bruno/.http collection from openapi.yaml + make collections`     | scripts/gen-collections.go, api/collections/*.bru, Makefile         | S18          | collections-verify drift gate (IT16)    |
+| S19b| `chore(dev): make docs-serve — local Swagger UI + Redoc live-reload on api/openapi.yaml` | Makefile, scripts/docs-serve.sh                                  | S18          | `make docs-serve` boots on dev          |
 | S20 | `docs(db): tbls config + generated ERD + make docs(-verify)` | .tbls.yml, docs/schema/, Makefile                                  | S5b          | `tbls diff` clean (IT10)                 |
 | S21 | `docs(arch): mermaid sequence diagrams (post/cqrs/oidc)`     | docs/sequences/post-ledger.md, cqrs-write-read.md, oidc-auth.md     | S15          | mermaid renders in CI                    |
 | S22 | `ci(docs): wire tbls-diff + openapi-lint + mermaid + graphify`| .github/workflows/ci.yml (docs job)                                | S18,S20,S21  | docs job green; graphify re-index runs   |
+| S22a| `ci(e2e): wire testcontainers e2e job + collection runner` | .github/workflows/ci.yml (e2e job)                                  | S17b,S19a    | e2e + AT16 collection runner green      |
 
 ### Step notes
 - **S2 money + dimensions:** `domain.Money` wraps `shopspring/decimal.Decimal`. A `JournalLine` carries
@@ -230,8 +239,36 @@ failing-test commit BEFORE code commit for domain/money/auth paths. Every commit
   Keycloak. Real Keycloak issuer URL comes from Vault-rendered config at runtime (never hardcoded).
 - **S15 CQRS purity:** `cmd/query` links only read repos. IT9 greps the query build for
   INSERT/UPDATE/DELETE and fails if found — enforces "query MUST NOT mutate".
-- **S17:** integration/e2e via testcontainers-go (Postgres). The migrations + trigger run against the
-  real container, so AT/IT exercise the DB-level invariant, not a mock.
+- **S17a e2e harness (reusable):** `e2e/harness/` exposes three primitives every AT/IT case composes:
+  (1) `Stack()` — testcontainers Postgres + a Keycloak mock issuer (JWKS endpoint serving a static RSA
+  keypair) + the command + query binaries booted on random ports, returned as a `*Stack` with `BaseURL`,
+  `DB`, `Cleanup()`; (2) `MintJWT(sub, aud)` — signs an RS256 token with the harness keypair so each
+  case mints its own owner identity (AT3/AT4 use two `sub`s); (3) `AssertSpecValid(t, req, resp)` —
+  loads `api/openapi.yaml` once per package via `kin-openapi`, validates the captured request+response
+  against the operation; called automatically from `harness.Do()`. Net effect: every AT case gets a
+  free schema-validation pass (IT6 is enforced by every e2e case, not one dedicated test). Harness
+  boot is budget-checked at <30s (IT17) so the e2e CI job stays usable.
+- **S17b e2e cases:** thin — each AT case is ~30 LOC because the harness owns boot, auth, and the
+  spec oracle. Failure mode: a handler that returns a body the spec doesn't describe fails AT1 AND
+  IT6 with one assertion. No hand-maintained golden JSON.
+- **S18 examples (IT15):** every operation in `openapi.yaml` carries a request `example` AND an
+  `example` per documented response code. These doubles serve as: (a) Swagger UI "Try it out" prefill
+  so the interactive flow is one-click not blank-form, (b) the canonical payload that AT15 replays
+  through a headless chromedp drive of /docs, (c) drift detection — if the handler's response
+  diverges from the example, IT6 (spec validation) and the contract test both fail. Spec also ships
+  the `bearerAuth` security scheme so the Authorize widget shows up.
+- **S19a interactive collection:** `scripts/gen-collections.go` reads `api/openapi.yaml` and emits
+  `api/collections/*.bru` (Bruno format) — versioned alongside the spec so a checkout works in Bruno
+  without re-importing. `make collections-verify` regenerates into a temp dir and diffs vs checked-in
+  files; drift fails CI (IT16). AT16 runs the collection through `bruno-cli` (or the equivalent .http
+  runner) against the live e2e stack — proves "what Swagger UI shows" matches "what curl sees" matches
+  "what the spec promises". Three-way parity.
+- **S19b dev loop:** `make docs-serve` runs Swagger UI + Redoc side-by-side on `localhost:8000` with a
+  fs watcher that reloads on `api/openapi.yaml` change. Pure dev convenience; not gated.
+- **S22a CI e2e:** dedicated `e2e` job in `.github/workflows/ci.yml` (separate from the docs job) runs
+  `go test -tags=e2e ./e2e/...` against testcontainers. Caches the Postgres + Keycloak-mock images so
+  the budget in IT17 holds. AT16 collection runner runs in the same job after the suite passes so it
+  exercises the already-booted stack.
 
 ### Deviations from source (all deliberate, all logged here)
 1. Money `Double` → `NUMERIC`/`decimal` (precision).
@@ -253,7 +290,8 @@ claimed gitleaks in 3 docs with zero CI — never again).
 
 | Doc | Source of truth | Tool | Output | Gate |
 |-----|-----------------|------|--------|------|
-| API reference | `api/openapi.yaml` (spec-first, written before handlers) | oapi-codegen + kin-openapi | Swagger UI at `/docs` | IT6 validates every req/resp vs spec; IT11 route coverage |
+| API reference | `api/openapi.yaml` (spec-first, written before handlers) | oapi-codegen + kin-openapi | Swagger UI at `/docs` (bearerAuth + per-op examples) | IT6 validates every req/resp vs spec; IT11 route coverage; IT15 examples present |
+| Interactive collection | `api/openapi.yaml` (same spec) | `scripts/gen-collections.go` → Bruno `.bru` | `api/collections/` | IT16 drift gate (`make collections-verify`); AT16 runs the collection against the e2e stack |
 | E-R diagram | `db/migration/*.sql` (live schema) | `tbls` | `docs/schema/` (md + mermaid ERD) | IT10 `tbls diff` fails CI on schema≠ERD |
 | Sequence diagrams | plan design intent | mermaid in `docs/sequences/` | post-ledger, cqrs-write-read, oidc-auth | rendered in CI; PR review |
 | Knowledge graph | the whole repo | `graphify --update` | `graphify-out/` | re-indexed in the docs CI job (S22) |
@@ -264,7 +302,7 @@ Port intent (not pixels) from source reference diagrams: `/tmp/accsrc/Design/cre
 `7月_CQRS_patterns.drawio`.
 
 ## Hand-off to the heads
-- **backend-engineer (HEAD):** owns S1–S22 (incl S5a/S5b/S5c). Write AT1–AT14 + IT1–IT14 as FAILING tests FIRST, then
+- **backend-engineer (HEAD):** owns S1–S22a (incl S5a/S5b/S5c, S17a/S17b, S19a/S19b). Write AT1–AT16 + IT1–IT17 as FAILING tests FIRST, then
   green via domain-modeler → tdd-implementer/migration-mapper → code-reviewer. Use `migration-mapper`
   for the Java→Go port (jOOQ→sqlc, Flyway→golang-migrate, Spring validation→domain+struct tags).
 - **infra-engineer (HEAD) — NEW TASK (separate feature plan `infra/keycloak-oidc`):** stand up a
