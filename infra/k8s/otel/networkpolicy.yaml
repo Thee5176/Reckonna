@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otel-collector
+  namespace: otel
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+      app.kubernetes.io/component: telemetry
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Cluster-wide ingest on 4317 (OTLP gRPC) + 4318 (OTLP HTTP). Any
+    # workload pod must be able to ship telemetry to its node-local collector.
+    # The empty namespaceSelector matches every namespace; tailnet ACLs gate
+    # who reaches the cluster, not who reaches the collector.
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+  egress:
+    # DNS to kube-dns.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Vault Agent talks to the Vault server during init.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: vault
+      ports:
+        - protocol: TCP
+          port: 8200
+    # External OTLP/gRPC backend over TLS. The `except` block keeps the
+    # wildcard from accidentally re-entering RFC1918 / CGNAT private space —
+    # all in-cluster + tailnet traffic must use the namespaced rules above.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+      ports:
+        - protocol: TCP
+          port: 443
