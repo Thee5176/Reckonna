@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: redis
+commonLabels:
+  app.kubernetes.io/part-of: reckonna
+  app.kubernetes.io/component: cache
+# Namespace is owned by Terraform (infra/redis.tf). kustomize does not declare it
+# to avoid `terraform apply` vs `kubectl apply -k` drift on labels/annotations.
+resources:
+  - serviceaccount.yaml
+  - service.yaml
+  - statefulset.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
