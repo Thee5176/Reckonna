@@ -114,3 +114,4 @@ Each step compiles/validates on its own. RED tests are committed before the mani
 - No PG backups / WAL archiving. Deferred to Plan 04 (backup/DR).
 - No PG HA (single replica). Deferred to Plan 05 (Patroni or Spilo).
 - No managed-cert / pg-bouncer. Deferred.
+- ACL grants `autogroup:admin → *:*` to prevent self-lockout (see commit `c68b68d`). Future hardening (S11+ in a follow-up plan): narrow to the explicit admin-needed flows (`tag:k8s:6443`, `tag:k8s:22`, `tag:k8s-operator:*`, and per-device infra reach), and gate genuine break-glass behind a dedicated `tag:break-glass` that requires explicit re-tagging in the admin console rather than standing `*:*` from every admin session.
