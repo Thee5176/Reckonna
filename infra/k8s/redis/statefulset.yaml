@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: redis
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/component: cache
+      annotations:
+        # ── Vault Agent Injector ─────────────────────────────────────────────
+        # Renders the `requirepass "<password>"` directive into
+        # /vault/secrets/redis.conf at pod start. No literal secret value lives
+        # in this manifest. The Vault role 'reckonna-redis' must grant read on
+        # 'secret/data/app/redis' (set up by platform admin).
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/role: "reckonna-redis"
+        vault.hashicorp.com/agent-inject-secret-redis.conf: "secret/data/app/redis"
+        vault.hashicorp.com/agent-inject-template-redis.conf: |
+          {{- with secret "secret/data/app/redis" -}}
+          requirepass "{{ .Data.data.password }}"
+          {{- end }}
+    spec:
+      serviceAccountName: redis
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          # `--include` loads the vault-rendered conf file (which sets
+          # `requirepass "<password>"`). Keeping the bind/dir flags here so the
+          # manifest still documents the runtime shape even though the include
+          # file could override them.
+          command:
+            - redis-server
+            - --include
+            - /vault/secrets/redis.conf
+            - --dir
+            - /data
+            - --appendonly
+            - "yes"
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          # Probes use redis-cli AUTH so they survive the vault-rendered
+          # requirepass. `-a` reads from the same conf file the server loaded;
+          # extracting via awk keeps the password off `ps`/env.
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'redis-cli -a "$(awk -F\" "/^requirepass/{print \$2}" /vault/secrets/redis.conf)" PING | grep -q PONG'
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - 'redis-cli -a "$(awk -F\" "/^requirepass/{print \$2}" /vault/secrets/redis.conf)" PING | grep -q PONG'
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # storageClassName left to cluster default; override per environment via kustomize patch.
+        resources:
+          requests:
+            storage: 5Gi
