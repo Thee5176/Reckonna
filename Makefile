@@ -5,7 +5,8 @@ COMPOSE ?= docker compose
 MIGRATE_DB_URL ?= $(DATABASE_URL)   # rendered from Vault (vault agent / direnv) — never hardcoded
 
 .PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci \
-        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe
+        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe \
+        redis-endpoint redis-smoke otel-smoke
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -72,3 +73,12 @@ tailnet-smoke: ## Non-destructive 'SELECT 1' against the tailnet PG endpoint
 
 pg-probe: ## App-side connectivity probe (DNS->TCP->query). Reads libpq PG* env vars.
 	@bash scripts/pg-probe.sh
+
+redis-endpoint: ## Resolve Redis tailnet endpoint (hostname + IP)
+	@bash scripts/redis-endpoint.sh
+
+redis-smoke: ## Non-destructive PING against the tailnet Redis endpoint
+	@bash scripts/redis-smoke.sh
+
+otel-smoke: ## Emit synthetic OTLP span at $$OTEL_TARGET (default localhost:4318)
+	@bash scripts/otel-smoke.sh
