@@ -37,6 +37,13 @@ resource "kubernetes_namespace" "tailscale" {
 # ACL excerpt — tailnet-side gate that controls who can reach the PG device.
 # Edit the JSON inline here so the policy is reviewable in PR. Concrete tag
 # owners live in the tailnet admin console (Vault stores the bootstrap token).
+#
+# IMPORTANT: Tailscale ACLs are deny-by-default once the policy is written.
+# An incomplete acls[] list will lock the tailnet owner (autogroup:admin) out
+# of every other device on the tailnet — including kubectl access to the k3s
+# control plane. The admin-everything rule below is intentional and must NOT
+# be removed when adding new dst rules; remove it only after explicit per-
+# device rules cover every flow you currently rely on.
 resource "tailscale_acl" "policy" {
   acl = jsonencode({
     tagOwners = {
@@ -45,12 +52,20 @@ resource "tailscale_acl" "policy" {
       "tag:dev"          = ["autogroup:admin"]
     }
     acls = [
-      # Devs reach the PG proxy on 5432.
+      # Tailnet owner keeps full reach — kubectl 6443, ssh, every device.
+      # Removing this rule will lock you out of the cluster from outside the
+      # operator's own pods (see issue captured during plan 02 first apply).
+      {
+        action = "accept"
+        src    = ["autogroup:admin"]
+        dst    = ["*:*"]
+      },
+      # Devs (tag:dev devices) reach the PG proxy on 5432.
       {
         action = "accept"
         src    = ["tag:dev"]
         dst    = ["tag:k8s:5432"]
-      }
+      },
     ]
     ssh = []
   })
