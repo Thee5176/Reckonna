@@ -11,6 +11,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.30"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.4"
+    }
   }
 }
 
@@ -20,4 +24,13 @@ provider "vault" {
 
 provider "kubernetes" {
   # kubeconfig from env / in-cluster — vendor-neutral, no cloud-specific auth here
+}
+
+# GitHub provider — owner is fixed; token is rendered from Vault, not from
+# .tfvars or env (see secrets-vault.md). Read scope: repo + admin:repo_hook
+# on Thee5176/Reckonna only. Token lives at:
+#   vault kv get -mount=secret homelab/github/terraform-token
+provider "github" {
+  owner = "Thee5176"
+  token = data.vault_kv_secret_v2.github_terraform.data["token"]
 }
