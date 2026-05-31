@@ -5,6 +5,14 @@ data "vault_kv_secret_v2" "database" {
   name  = "app/database" # vault kv get -mount=secret app/database
 }
 
+# Redis cache password (plan 03, S4). Contract + audit only — the value flows
+# into pods via the Vault Agent Injector annotations on the Redis StatefulSet,
+# not through Terraform state.
+data "vault_kv_secret_v2" "redis" {
+  mount = "secret"
+  name  = "app/redis" # vault kv get -mount=secret app/redis
+}
+
 # Usage elsewhere (illustrative — concrete resources land in the infra feature plan):
 #   username = data.vault_kv_secret_v2.database.data["username"]
 #   password = data.vault_kv_secret_v2.database.data["password"]
