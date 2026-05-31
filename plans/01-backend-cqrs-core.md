@@ -1,6 +1,6 @@
 ---
 feature: 01-backend-cqrs-core
-status: draft
+status: approved
 domain: backend
 depends_on: 00-bootstrap-deps-vault
 external_prereq: infra/keycloak-oidc   # self-hosted Keycloak — new infra task (see Hand-off)
