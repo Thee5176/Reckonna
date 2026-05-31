@@ -13,6 +13,14 @@ data "vault_kv_secret_v2" "redis" {
   name  = "app/redis" # vault kv get -mount=secret app/redis
 }
 
+# OTLP exporter endpoint + API key (plan 03, S9). Same contract: the value
+# flows into the OTel Collector DaemonSet via the Vault Agent Injector, never
+# through Terraform state or tfvars.
+data "vault_kv_secret_v2" "otel_exporter" {
+  mount = "secret"
+  name  = "app/otel/exporter" # vault kv get -mount=secret app/otel/exporter
+}
+
 # Usage elsewhere (illustrative — concrete resources land in the infra feature plan):
 #   username = data.vault_kv_secret_v2.database.data["username"]
 #   password = data.vault_kv_secret_v2.database.data["password"]
