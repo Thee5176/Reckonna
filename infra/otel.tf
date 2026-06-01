@@ -7,11 +7,20 @@ resource "kubernetes_namespace" "otel" {
   metadata {
     name = "otel"
     labels = {
-      "app.kubernetes.io/name"             = "otel-collector"
-      "app.kubernetes.io/part-of"          = "reckonna"
-      "pod-security.kubernetes.io/enforce" = "restricted"
-      "pod-security.kubernetes.io/audit"   = "restricted"
-      "pod-security.kubernetes.io/warn"    = "restricted"
+      "app.kubernetes.io/name"    = "otel-collector"
+      "app.kubernetes.io/part-of" = "reckonna"
+      # PSA exception: the OTel Collector DaemonSet uses hostNetwork: true +
+      # hostPort 4317 (gRPC) + hostPort 4318 (HTTP) so workloads reach the
+      # node-local receiver via $(NODE_IP) from the downward API. PSA
+      # `restricted` and `baseline` both forbid hostNetwork / hostPort, so
+      # this single namespace must run `privileged`. The container
+      # securityContext stays hardened (runAsNonRoot=10001, drop ALL caps,
+      # readOnlyRootFilesystem=true, no privilege escalation) — the
+      # relaxation is only at the namespace admission layer, not the
+      # workload.
+      "pod-security.kubernetes.io/enforce" = "privileged"
+      "pod-security.kubernetes.io/audit"   = "privileged"
+      "pod-security.kubernetes.io/warn"    = "privileged"
       "kubernetes.io/metadata.name"        = "otel"
     }
   }
