@@ -136,7 +136,7 @@ Each step compiles/validates standalone. Manifest-only steps verify with static 
 
 - **S1 — nginx ConfigMap.** Two keys: `healthz` and `reckonna_hello`. Mounted at
   `/usr/share/nginx/html/` (filenames as URL paths). Default nginx config serves static
-  files; `try_files` fall-back handles `/reckonna/hello` → `reckonna_hello`. Probes
+  files; `try_files` fallback handles `/reckonna/hello` → `reckonna_hello`. Probes
   curl `/healthz` on port 80.
 - **S2 — cloudflared remote-managed.** Deployment `args`:
   `["tunnel", "--no-autoupdate", "run", "--token", "$(TUNNEL_TOKEN)"]`. `TUNNEL_TOKEN`
