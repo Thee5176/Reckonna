@@ -1,5 +1,5 @@
 ---
-feature: 01-backend-cqrs-core
+feature: 03-backend-cqrs-core
 status: approved
 domain: backend
 depends_on: 00-bootstrap-deps-vault
@@ -32,7 +32,7 @@ decisions:
         locales/<lang>.json keyed by code (v1: en, ja; extensible). Translations never touch schema.
 ---
 
-# Plan 01 — Backend CQRS Core (Go/Gin rewrite of the Spring Boot command+query services)
+# Plan 03 — Backend CQRS Core (Go/Gin rewrite of the Spring Boot command+query services)
 
 Faithful Go/Gin rewrite of BOTH Java services into `cmd/command` + `cmd/query`, preserving the
 CQRS split, the double-entry domain, and every business endpoint. Improvements mandated by Reckonna
@@ -107,7 +107,7 @@ Context lives in dimensions, NOT in codes or accounts. v1 dimension types: **ent
 
 ### 3. Books (§8) — `book` (S3 + seed) — v1 = `base` only
 One `base` book. **Each journal entry balances within a book** (R8.4): Σ debit = Σ credit. Delta books
-(ifrs/gaap) + the mapping layer + cross-book consolidation are LATER features — not in plan 01.
+(ifrs/gaap) + the mapping layer + cross-book consolidation are LATER features — not in plan 03.
 
 ### 4. Currency handling (v1, phased)
 Currency is a dimension value on each line (§2). **A v1 journal entry is single-currency** — all lines
@@ -309,7 +309,7 @@ Port intent (not pixels) from source reference diagrams: `/tmp/accsrc/Design/cre
   self-hosted Keycloak as the OIDC provider (realm, client, audience, JWKS), expose issuer URL via
   Vault. Blocks S10 *at runtime* only — S10's tests run against mock/testcontainers Keycloak, so
   backend work is not gated on infra completion. Provision before e2e (S17) against a live stack.
-- **plan-tracker:** logs each landed step to `01-backend-cqrs-core.impl.md`.
+- **plan-tracker:** logs each landed step to `03-backend-cqrs-core.impl.md`.
 
 "Done" = AT1–AT14 + IT1–IT14 green, `make test` race-clean, `make lint` clean, query build read-only,
 `make docs-verify` clean (openapi lint + tbls diff), CoA seed generated from config/coa.yaml + validated
