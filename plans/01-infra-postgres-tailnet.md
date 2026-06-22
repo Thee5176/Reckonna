@@ -24,10 +24,7 @@ apply`, no `kubectl apply`, no `helm install` in this plan** — those are human
 | 5 | Tailscale OAuth client + tags live in Vault at `secret/app/tailscale/operator`. | Same policy. |
 | 6 | One step = one commit = one `Plan: S<n>` trailer. Conventional Commits. | `devops.md`. |
 
-## File structure
-
-```
-plans/02-infra-postgres-tailnet.md      # this file
+plans/01-infra-postgres-tailnet.md      # this file
 infra/
   k8s/
     postgres/

@@ -1,8 +1,7 @@
 # `e2e/` — End-to-End Acceptance Tests
 
 Top of the V-model. These verify whole-system behavior against the **acceptance spec** in
-`plans/01-backend-cqrs-core.md` (AT1–AT14) — the business-requirement layer.
-
+`plans/03-backend-cqrs-core.md` (AT1–AT18) — the business-requirement layer.
 ## What lives here
 - Go tests behind the `e2e` build tag (`//go:build e2e`), so a normal `go test ./...` skips them.
 - Each test drives the real HTTP API of `cmd/command` + `cmd/query` against a **real Postgres**
