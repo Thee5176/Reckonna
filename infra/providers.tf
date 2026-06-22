@@ -26,11 +26,12 @@ provider "kubernetes" {
   # kubeconfig from env / in-cluster — vendor-neutral, no cloud-specific auth here
 }
 
-# GitHub provider — owner is fixed; token is rendered from Vault, not from
-# .tfvars or env (see secrets-vault.md). Read scope: repo + admin:repo_hook
-# on Thee5176/Reckonna only. Token lives at:
-#   vault kv get -mount=secret homelab/github/terraform-token
+# GitHub provider — owner fixed; token supplied via the GITHUB_TOKEN env var,
+# NOT inline (a `token =` value is persisted in tfstate). Export it from Vault
+# at apply time — mirrors the vault provider above, which also auths from env:
+#   export GITHUB_TOKEN=$(vault kv get -mount=secret -field=token homelab/github/terraform-token)
+# PAT scope: repo + admin:repo_hook on Thee5176/Reckonna only.
 provider "github" {
   owner = "Thee5176"
-  token = data.vault_kv_secret_v2.github_terraform.data["token"]
+  # token: read from GITHUB_TOKEN env — never set inline (would land in tfstate).
 }
