@@ -1,8 +1,12 @@
 ---
-feature: 01-backend-cqrs-core
+feature: 03-backend-cqrs-core
 status: draft
 domain: backend
-depends_on: 00-bootstrap-deps-vault
+depends_on:
+  - 00-bootstrap-deps-vault
+  - 01-infra-postgres-tailnet   # was 02 pre-renumber
+  - 02-infra-k8s-cloudflare-tunnel  # new — deploy target + public ingress
+renumbered_from: 01-backend-cqrs-core   # 2026-05-31 priority swap
 external_prereq: infra/keycloak-oidc   # self-hosted Keycloak — new infra task (see Hand-off)
 source_ref:
   command: Accounting_CQRS_Project/springboot_cqrs_command @ aa24678
@@ -32,7 +36,13 @@ decisions:
         locales/<lang>.json keyed by code (v1: en, ja; extensible). Translations never touch schema.
 ---
 
-# Plan 01 — Backend CQRS Core (Go/Gin rewrite of the Spring Boot command+query services)
+# Plan 03 — Backend CQRS Core (Go/Gin rewrite of the Spring Boot command+query services)
+
+<!-- renumbered 2026-05-31 from plan 01. Plans 01 (postgres-tailnet) + 02 (k8s + cloudflare) are
+     prerequisite infra; this plan now lands on top of a live homelab k3s + tailnet-PG + reckonna.thee5176.com. -->
+<!-- NOTE: in-body references to "plan 02 (docs-hardening)" predate this renumber and refer to a
+     future docs-hardening plan (not the new 02-infra-k8s-cloudflare-tunnel). Resolve in a follow-up
+     docs pass — not in this renumber commit. -->
 
 Faithful Go/Gin rewrite of BOTH Java services into `cmd/command` + `cmd/query`, preserving the
 CQRS split, the double-entry domain, and every business endpoint. Improvements mandated by Reckonna

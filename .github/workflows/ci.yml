@@ -9,6 +9,7 @@ on:
     branches: [main, develop]
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 env:
   GO_VERSION: "1.23"
@@ -85,25 +86,33 @@ jobs:
 
   sonar:
     name: SonarQube
-    # Runs unconditionally so the required `SonarQube` status check (branch
-    # protection, infra/branch_protection.tf) always reports — a skipped job
-    # never reports success and would hang merges "pending".
+    # Runs on self-hosted runner inside homelab cluster to bypass Cloudflare bot challenge
+    # on vault.thee5176.com. Uses internal cluster DNS for Vault + Sonar.
     # Pre-reqs (configure in GitHub repo settings → Secrets and variables → Actions):
-    #   Variables: VAULT_ADDR=http://vault.vault.svc.cluster.local:8200
+    #   Variables: SONAR_ENABLED=true
+    #              VAULT_INTERNAL_URL (optional, default http://vault.vault.svc.cluster.local:8200)
+    #              SONAR_INTERNAL_URL (optional, default http://sonar.sonarqube.svc.cluster.local:9000)
     #   Secrets:   VAULT_ROLE_ID, VAULT_SECRET_ID  (from CI-only AppRole `ci-reckonna`
     #              with read scope on secret/data/homelab/sonar/ci-token only)
-    # Runs on the in-cluster self-hosted runner (gh-runner-reckonna): the public
-    # vault.thee5176.com host is behind Cloudflare Access (403s vault-action), so
-    # Vault must be reached at its in-cluster ClusterIP. A GitHub-hosted runner
-    # cannot reach either the in-cluster address or the Tailnet.
-    runs-on: [self-hosted, linux, x64, tailscale]
+    # Only run on push OR same-repo PRs — never on fork PRs (untrusted code on self-hosted runner).
+    # workflow_dispatch restricted to main/develop refs so untrusted topic branches
+    # cannot exfiltrate Vault SecretID via the self-hosted runner.
+    if: >-
+      ${{ vars.SONAR_ENABLED == 'true' &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'workflow_dispatch' &&
+            (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) ||
+           github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: [self-hosted, tailscale]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token)
+      - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token), internal cluster DNS
         uses: hashicorp/vault-action@v3
         with:
-          url: ${{ vars.VAULT_ADDR }}
+          url: ${{ vars.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
           method: approle
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
@@ -112,4 +121,4 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@v4
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonar.thee5176.com
+          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
