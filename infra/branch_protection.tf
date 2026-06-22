@@ -18,6 +18,8 @@ resource "github_branch_protection" "main" {
 
   # All 6 CI jobs that must be green before a merge to main.
   # Names match `jobs.<id>.name` in .github/workflows/ci.yml exactly.
+  # SonarQube runs unconditionally (no SONAR_ENABLED gate) so this required
+  # check always reports — a skipped job would never report and block merges.
   required_status_checks {
     strict = true
     contexts = [
