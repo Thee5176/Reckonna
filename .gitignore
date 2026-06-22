@@ -25,6 +25,14 @@ node_modules/
 coverage/
 coverage.out
 
+# --- Terraform state/plan (never commit — may carry secrets) ---
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# --- Sonar scanner working dir ---
+.scannerwork/
+
 # --- Tooling / generated ---
 graphify-out/
 .claude-flow/
