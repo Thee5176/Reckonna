@@ -122,3 +122,28 @@ jobs:
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
+
+  # Always-run gate so `Sonar gate` can be a REQUIRED status check without
+  # hanging PRs. The `sonar` job above is skippable (SONAR_ENABLED gate + the
+  # same-repo-PR fork guard). A required check that gets skipped never reports
+  # and blocks the merge "pending" forever — so we require this gate instead.
+  # if: always() makes it run even when `sonar` is skipped; it passes on
+  # success OR skipped, and fails only on a real Sonar failure/cancellation.
+  sonar-gate:
+    name: Sonar gate
+    needs: [sonar]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate SonarQube job result
+        run: |
+          result='${{ needs.sonar.result }}'
+          echo "SonarQube job result: $result"
+          case "$result" in
+            success|skipped)
+              echo "Gate OK — SonarQube passed or was intentionally skipped."
+              exit 0 ;;
+            *)
+              echo "Gate FAIL — SonarQube result: $result"
+              exit 1 ;;
+          esac
