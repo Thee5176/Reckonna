@@ -1,7 +1,6 @@
-# PROPOSED ci.yml (fixes the first CI run). Injection-safe. Apply with:
-#     mv docs/ci-workflow.proposed.yml .github/workflows/ci.yml && git add -A && git commit && git push
-# Fixes: guard go/e2e for the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
-# Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
+# CI — injection-safe. Notes:
+#   go/e2e jobs guard the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
+#   Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
 # ---------------------------------------------------------------------------------------------------
 name: CI
 on:

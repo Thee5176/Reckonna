@@ -80,7 +80,7 @@ Each step compiles/validates on its own. RED tests are committed before the mani
 
 | ID | Commit (verbatim) | Files | Verify |
 |----|-------------------|-------|--------|
-| S0 | `docs(plan): infra plan 02 — postgres on k8s via tailscale (tailnet-only)` | `plans/02-infra-postgres-tailnet.md` | review only |
+| S0 | `docs(plan): infra plan 01 — postgres on k8s via tailscale (tailnet-only)` | `plans/01-infra-postgres-tailnet.md` | review only |
 | S1 | `chore(k8s): postgres namespace + kustomization base` | `infra/k8s/postgres/namespace.yaml`, `infra/k8s/postgres/kustomization.yaml` | `kubeconform -strict` |
 | S2 | `feat(k8s): postgres service + statefulset with vault-injector annotations` | `infra/k8s/postgres/service.yaml`, `infra/k8s/postgres/statefulset.yaml`, `infra/k8s/postgres/serviceaccount.yaml`, `infra/k8s/postgres/pdb.yaml` | `kubeconform`; grep tests IT5/IT6 |
 | S3 | `feat(k8s): networkpolicy — deny-all + allow tailscale-operator + vault` | `infra/k8s/postgres/networkpolicy.yaml`, `tests/networkpolicy_test.sh` | `kubeconform`; IT3 |
@@ -106,7 +106,7 @@ Each step compiles/validates on its own. RED tests are committed before the mani
 
 - **infra-engineer (HEAD):** owns every step. Writes IT1–IT7 as failing checks first where applicable (S2/S3/S5/S6), then green via `iac-ops` → `code-reviewer`.
 - **Human:** runs `helm install`, `kubectl apply -k infra/k8s/postgres`, `kubectl apply -k infra/k8s/tailscale`, `terraform apply`. Not in this plan.
-- "Done" = AT1–AT3 documented; IT1–IT7 green; `docs/postgres-tailnet.md` reviewed; plan-tracker logs to `02-infra-postgres-tailnet.impl.md`.
+- "Done" = AT1–AT3 documented; IT1–IT7 green; `docs/postgres-tailnet.md` reviewed; plan-tracker logs to `01-infra-postgres-tailnet.impl.md`.
 
 ## Known gaps (deferred)
 
