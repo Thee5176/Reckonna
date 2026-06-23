@@ -1,0 +1,21 @@
+# Local dev stack. Secrets come from the environment (Vault-rendered / direnv) — NEVER hardcoded here
+# (secrets-vault.md). Set POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB in your Vault-rendered env first.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set via Vault-rendered env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set via Vault-rendered env}
+      POSTGRES_DB: ${POSTGRES_DB:-accounting}
+    ports:
+      - "5432:5432"
+    volumes:
+      - reckonna_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  reckonna_pgdata:

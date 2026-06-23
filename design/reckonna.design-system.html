@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Reckonna · Design System v0.1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,ital,wght@8..60,0,300..700;8..60,1,300..700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ───────── TOKENS — Forest Reserve (primary) ───────── */
+  :root {
+    --bg: #efece1;
+    --bg-elev: #e2dccb;
+    --surface: #faf7ec;
+    --ink: #11201a;
+    --ink-2: #324138;
+    --ink-3: #6d6b58;
+    --rule: #1b2a23;
+    --rule-soft: rgba(17,32,26,0.12);
+    --hairline: rgba(17,32,26,0.07);
+    --debit:  #7a1d1d;
+    --credit: #2a5a2a;
+    --accent: #8a5a1c;
+    --highlight: #e9d391;
+
+    --serif: 'Source Serif 4', 'Times New Roman', serif;
+    --mono:  'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+    --r-sm: 4px; --r-md: 6px; --r-lg: 10px;
+    --sh-1: 0 1px 0 rgba(17,32,26,0.04), 0 1px 2px rgba(17,32,26,0.05);
+    --sh-2: 0 1px 0 rgba(17,32,26,0.06), 0 6px 18px -8px rgba(17,32,26,0.18);
+  }
+
+  /* ───────── Base ───────── */
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.5;
+    font-feature-settings: "tnum" 1, "zero" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { font-family: var(--serif); font-weight: 500; letter-spacing: -0.01em; margin: 0; }
+  p { margin: 0; }
+  hr { border: 0; border-top: 1px solid var(--hairline); height: 0; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); padding: 1px 6px; border-radius: 3px; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ───────── Layout ───────── */
+  .doc {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 980px);
+    gap: 56px; max-width: 1340px; margin: 0 auto;
+    padding: 56px 48px 96px;
+  }
+  .toc {
+    position: sticky; top: 32px; align-self: start;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .toc h4 {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px;
+  }
+  .toc a {
+    display: block; padding: 6px 0; color: var(--ink-2); text-decoration: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .toc a:hover { color: var(--ink); }
+  .toc .v { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rule-soft); color: var(--ink-3); font-size: 11px; line-height: 1.7; }
+
+  /* ───────── Sections ───────── */
+  section { padding-top: 64px; padding-bottom: 8px; scroll-margin-top: 24px; }
+  section:first-of-type { padding-top: 0; }
+  .section-num { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.18em; }
+  .section-h {
+    font-family: var(--serif); font-size: 40px; line-height: 1.05; letter-spacing: -0.015em;
+    margin: 8px 0 14px;
+  }
+  .section-lead {
+    font-family: var(--serif); font-size: 18px; line-height: 1.55; color: var(--ink-2);
+    font-style: italic; max-width: 640px;
+  }
+  .rule-block { border-top: 1px solid var(--rule); margin-top: 28px; padding-top: 24px; }
+
+  /* ───────── Hero ───────── */
+  .hero { padding-bottom: 24px; }
+  .hero .meta { display: flex; gap: 28px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 28px; }
+  .hero .meta b { color: var(--ink-2); font-weight: 500; }
+  .hero h1 { font-size: 72px; line-height: 1.0; letter-spacing: -0.025em; max-width: 920px; }
+  .hero h1 .it { font-style: italic; color: var(--ink-3); }
+  .hero p { font-family: var(--mono); font-size: 14px; color: var(--ink-2); margin-top: 22px; max-width: 640px; line-height: 1.65; }
+
+  /* ───────── Generic cards ───────── */
+  .card {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: var(--r-md); box-shadow: var(--sh-1);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* ───────── Components doc ───────── */
+  .spec {
+    display: grid; grid-template-columns: 1fr 240px; gap: 28px;
+    padding: 24px; border: 1px solid var(--hairline); border-radius: var(--r-md);
+    background: var(--surface);
+  }
+  .spec-stage { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; min-height: 60px; }
+  .spec-notes { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); line-height: 1.6; border-left: 1px solid var(--hairline); padding-left: 18px; }
+  .spec-notes b { color: var(--ink); }
+
+  /* ───────── Buttons ───────── */
+  .btn {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 500;
+    padding: 9px 16px; border-radius: 4px; cursor: pointer;
+    letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+  }
+  .btn.secondary { background: transparent; color: var(--ink); border-color: var(--rule); }
+  .btn.ghost     { background: transparent; color: var(--ink); border-color: var(--hairline); }
+  .btn.accent    { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* ───────── Badges ───────── */
+  .badge {
+    font-family: var(--mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 3px;
+    display: inline-block;
+  }
+  .badge.draft   { color: var(--ink-3);  border: 1px solid var(--rule-soft); }
+  .badge.review  { color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent); }
+  .badge.posted  { color: var(--credit); border: 1px solid color-mix(in oklab, var(--credit) 30%, transparent); }
+  .badge.flagged { color: var(--debit);  border: 1px solid color-mix(in oklab, var(--debit)  30%, transparent); }
+
+  /* ───────── Inputs ───────── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field span { font-size: 11px; color: var(--ink-3); letter-spacing: 0.4px; }
+  .field input {
+    font-family: var(--mono); font-size: 13.5px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 10px 12px;
+  }
+  .field input.right { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ───────── Numbers / ledger rows ───────── */
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+  .num.debit  { color: var(--debit); }
+  .num.credit { color: var(--credit); }
+
+  .ledger { border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
+  .ledger .row {
+    display: grid; grid-template-columns: 70px 1fr 160px 90px 110px;
+    align-items: center; gap: 12px; padding: 12px 16px;
+    font-family: var(--mono); font-size: 13px;
+  }
+  .ledger .row + .row { border-top: 1px solid var(--hairline); }
+
+  /* ───────── KPI tile ───────── */
+  .kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 16px; }
+  .kpi .lab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .kpi .val { font-family: var(--mono); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .bars { margin-top: 12px; display: flex; gap: 2px; align-items: flex-end; height: 24px; }
+  .kpi .bars i { width: 4px; background: var(--ink-2); opacity: 0.55; display: block; }
+
+  /* ───────── Color swatches ───────── */
+  .palette-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .swatch { display: flex; flex-direction: column; gap: 5px; }
+  .swatch .chip { height: 88px; border-radius: 4px; border: 1px solid var(--hairline); }
+  .swatch .name { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); font-weight: 500; }
+  .swatch .hex  { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.4px; }
+
+  .palette-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 22px; }
+  .palette-card.alt { background: var(--bg); }
+
+  /* ───────── Logo stages ───────── */
+  .logo-stage {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: var(--r-md); padding: 48px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px;
+  }
+  .logo-stage.dark { background: var(--ink); }
+  .logo-stage.dark .lbl { color: var(--bg); }
+
+  /* ───────── Type specimen ───────── */
+  .type-line { display: flex; align-items: baseline; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .type-line .lab { width: 92px; font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.4px; font-family: var(--mono); }
+  .type-line .smp { font-family: var(--serif); }
+  .type-line.mono .smp { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ───────── Token table ───────── */
+  table.tokens { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; }
+  table.tokens th { text-align: left; font-weight: 400; color: var(--ink-3); font-size: 10.5px; letter-spacing: 0.4px; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+  table.tokens td { padding: 10px 12px; border-bottom: 1px solid var(--hairline); color: var(--ink-2); }
+  table.tokens td:first-child { color: var(--accent); }
+  table.tokens .sw { display: inline-block; width: 14px; height: 14px; border-radius: 2px; vertical-align: -3px; margin-right: 8px; border: 1px solid var(--hairline); }
+
+  /* ───────── Footer ───────── */
+  footer { padding: 64px 48px; max-width: 1340px; margin: 0 auto; border-top: 1px solid var(--hairline); font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); display: flex; justify-content: space-between; }
+
+  @media print {
+    .toc { display: none; }
+    .doc { grid-template-columns: minmax(0, 1fr); padding: 24px; max-width: none; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <!-- TOC -->
+  <aside class="toc">
+    <h4>Contents</h4>
+    <a href="#identity">01 &nbsp; Identity</a>
+    <a href="#logo">02 &nbsp; Logo</a>
+    <a href="#color">03 &nbsp; Color</a>
+    <a href="#type">04 &nbsp; Type</a>
+    <a href="#spacing">05 &nbsp; Spacing &amp; radii</a>
+    <a href="#components">06 &nbsp; Components</a>
+    <a href="#patterns">07 &nbsp; Patterns</a>
+    <a href="#voice">08 &nbsp; Voice</a>
+    <a href="#tokens">09 &nbsp; Tokens</a>
+    <div class="v">
+      <b style="color:var(--ink-2)">RECKONNA</b><br/>
+      Design System v0.1<br/>
+      2026·05·25 · concept
+    </div>
+  </aside>
+
+  <main>
+
+  <!-- ─────────────  HERO  ───────────── -->
+  <section class="hero" style="padding-top:0">
+    <div class="meta">
+      <span><b>BRAND</b> Reckonna</span>
+      <span><b>VERSION</b> 0.1 · concept</span>
+      <span><b>PALETTE</b> Forest Reserve</span>
+    </div>
+    <h1>Everyday accounting, <span class="it">professionally managed.</span></h1>
+    <p>
+      Reckonna is a modern accounting product drawn with an accountant's hand. The system pairs a confident
+      serif with a disciplined monospace, prefers paper-toned surfaces over chrome, and earns its color
+      by speaking the language of debit and credit. This document is the canonical reference.
+    </p>
+  </section>
+
+  <!-- ─────────────  IDENTITY  ───────────── -->
+  <section id="identity">
+    <div class="section-num">01</div>
+    <h2 class="section-h">Identity</h2>
+    <p class="section-lead">A calm, professional brand for people who want professional-standard accounting without needing professional-level knowledge.</p>
+
+    <div class="rule-block grid-2">
+      <div>
+        <h3 style="font-size:20px; margin-bottom:8px">Promise</h3>
+        <p style="font-family:var(--mono); font-size:13px; line-height:1.65; color:var(--ink-2)">
+          Reckonna helps users manage everyday accounting with professional standards — through simple workflows,
+          clear structure, and supportive guidance.
+        </p>
+      </div>
+      <div>
+        <h3 style="font-size:20px; margin-bottom:8px">Personality</h3>
+        <ul style="font-family:var(--mono); font-size:13px; color:var(--ink-2); margin:0; padding-left:18px; line-height:1.8">
+          <li>Calm, not cold</li>
+          <li>Professional, not intimidating</li>
+          <li>Modern, not trendy</li>
+          <li>Helpful, not overly technical</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  LOGO  ───────────── -->
+  <section id="logo">
+    <div class="section-num">02</div>
+    <h2 class="section-h">Logo</h2>
+    <p class="section-lead">The mark is the balanced-columns lockup. Two columns stand for the T-account — the original gesture of double-entry bookkeeping — without naming it.</p>
+
+    <div class="rule-block">
+      <div class="logo-stage">
+        <!-- LOGO 2 — Balanced columns -->
+        <div style="display:flex; align-items:center; gap:22px">
+          <svg width="72" height="72" viewBox="0 0 44 44" fill="none">
+            <rect x="1" y="1" width="42" height="42" rx="3" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="22" y1="6" x2="22" y2="38" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="6"  y1="14" x2="38" y2="14" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="10" y1="20" x2="18" y2="20" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="10" y1="25" x2="18" y2="25" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="10" y1="30" x2="18" y2="30" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="20" x2="34" y2="20" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="25" x2="34" y2="25" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="30" x2="34" y2="30" stroke="var(--ink)" stroke-width="1"/>
+          </svg>
+          <div style="font-family:var(--serif); font-weight:500; font-size:48px; color:var(--ink); letter-spacing:-0.015em; line-height:1">Reckonna</div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:16px">
+        <div class="logo-stage" style="padding:24px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <rect x="1" y="1" width="42" height="42" rx="3" stroke="var(--ink)" stroke-width="1.2"/>
+              <line x1="22" y1="6" x2="22" y2="38" stroke="var(--ink)" stroke-width="1.2"/>
+              <line x1="6"  y1="14" x2="38" y2="14" stroke="var(--ink)" stroke-width="1.2"/>
+              <line x1="10" y1="20" x2="18" y2="20" stroke="var(--ink)" stroke-width="1"/>
+              <line x1="10" y1="25" x2="18" y2="25" stroke="var(--ink)" stroke-width="1"/>
+              <line x1="10" y1="30" x2="18" y2="30" stroke="var(--ink)" stroke-width="1"/>
+              <line x1="26" y1="20" x2="34" y2="20" stroke="var(--ink)" stroke-width="1"/>
+              <line x1="26" y1="25" x2="34" y2="25" stroke="var(--ink)" stroke-width="1"/>
+              <line x1="26" y1="30" x2="34" y2="30" stroke="var(--ink)" stroke-width="1"/>
+            </svg>
+            <div style="font-family:var(--serif); font-weight:500; font-size:28px; color:var(--ink); line-height:1">Reckonna</div>
+          </div>
+        </div>
+        <div class="logo-stage" style="padding:24px">
+          <svg width="56" height="56" viewBox="0 0 44 44" fill="none">
+            <rect x="1" y="1" width="42" height="42" rx="3" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="22" y1="6" x2="22" y2="38" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="6"  y1="14" x2="38" y2="14" stroke="var(--ink)" stroke-width="1.2"/>
+            <line x1="10" y1="20" x2="18" y2="20" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="10" y1="25" x2="18" y2="25" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="10" y1="30" x2="18" y2="30" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="20" x2="34" y2="20" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="25" x2="34" y2="25" stroke="var(--ink)" stroke-width="1"/>
+            <line x1="26" y1="30" x2="34" y2="30" stroke="var(--ink)" stroke-width="1"/>
+          </svg>
+        </div>
+        <div class="logo-stage dark" style="padding:24px">
+          <div style="display:flex; align-items:center; gap:14px">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <rect x="1" y="1" width="42" height="42" rx="3" stroke="var(--bg)" stroke-width="1.2"/>
+              <line x1="22" y1="6" x2="22" y2="38" stroke="var(--bg)" stroke-width="1.2"/>
+              <line x1="6"  y1="14" x2="38" y2="14" stroke="var(--bg)" stroke-width="1.2"/>
+              <line x1="10" y1="20" x2="18" y2="20" stroke="var(--bg)" stroke-width="1"/>
+              <line x1="10" y1="25" x2="18" y2="25" stroke="var(--bg)" stroke-width="1"/>
+              <line x1="10" y1="30" x2="18" y2="30" stroke="var(--bg)" stroke-width="1"/>
+              <line x1="26" y1="20" x2="34" y2="20" stroke="var(--bg)" stroke-width="1"/>
+              <line x1="26" y1="25" x2="34" y2="25" stroke="var(--bg)" stroke-width="1"/>
+              <line x1="26" y1="30" x2="34" y2="30" stroke="var(--bg)" stroke-width="1"/>
+            </svg>
+            <div style="font-family:var(--serif); font-weight:500; font-size:28px; color:var(--bg); line-height:1">Reckonna</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:24px">
+        <div>
+          <div class="eyebrow" style="margin-bottom:8px">Clearspace</div>
+          <p style="font-family:var(--mono); font-size:12.5px; color:var(--ink-2); line-height:1.65">
+            Reserve a clearspace equal to the height of one "R" cap on every side of the lockup. The mark
+            never sits inside another shape; it is always the dominant element in its frame.
+          </p>
+        </div>
+        <div>
+          <div class="eyebrow" style="margin-bottom:8px">Don't</div>
+          <p style="font-family:var(--mono); font-size:12.5px; color:var(--ink-2); line-height:1.65">
+            Don't recolor the columns, don't set the wordmark in monospace, don't outline or shadow the mark.
+            For favicons, use the symbol alone at 16×16 minimum.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  COLOR  ───────────── -->
+  <section id="color">
+    <div class="section-num">03</div>
+    <h2 class="section-h">Color</h2>
+    <p class="section-lead">Forest Reserve is the production palette. Warm cream, deep forest green, copper — read together as <i>premium private bank</i>. Color earns its place only on debit, credit, and emphasis.</p>
+
+    <div class="rule-block">
+      <div class="palette-card">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px">
+          <div>
+            <div class="eyebrow">Palette · forest · default</div>
+            <h3 style="font-size:24px; margin-top:6px">Forest Reserve</h3>
+          </div>
+          <span class="badge posted">Production</span>
+        </div>
+        <div class="palette-grid">
+          <div class="swatch"><div class="chip" style="background:#efece1"></div><span class="name">Paper</span><span class="hex">#EFECE1 · --bg</span></div>
+          <div class="swatch"><div class="chip" style="background:#faf7ec"></div><span class="name">Sheet</span><span class="hex">#FAF7EC · --surface</span></div>
+          <div class="swatch"><div class="chip" style="background:#11201a"></div><span class="name">Ink</span><span class="hex">#11201A · --ink</span></div>
+          <div class="swatch"><div class="chip" style="background:#6d6b58"></div><span class="name">Muted</span><span class="hex">#6D6B58 · --ink-3</span></div>
+          <div class="swatch"><div class="chip" style="background:#7a1d1d"></div><span class="name">Debit</span><span class="hex">#7A1D1D · --debit</span></div>
+          <div class="swatch"><div class="chip" style="background:#2a5a2a"></div><span class="name">Credit</span><span class="hex">#2A5A2A · --credit</span></div>
+          <div class="swatch"><div class="chip" style="background:#8a5a1c"></div><span class="name">Accent</span><span class="hex">#8A5A1C · --accent</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px" class="grid-2">
+        <div class="palette-card alt">
+          <div class="eyebrow" style="margin-bottom:6px">Alternate · ink</div>
+          <h4 style="font-family:var(--serif); font-size:18px; margin-bottom:14px">Ink &amp; Vellum</h4>
+          <div class="palette-grid" style="grid-template-columns:repeat(7, 1fr); gap:6px">
+            <div class="chip" style="background:#f3eee2; height:38px"></div>
+            <div class="chip" style="background:#fbf8ef; height:38px"></div>
+            <div class="chip" style="background:#15171a; height:38px"></div>
+            <div class="chip" style="background:#6e6a5e; height:38px"></div>
+            <div class="chip" style="background:#8a2a1f; height:38px"></div>
+            <div class="chip" style="background:#2f5d3a; height:38px"></div>
+            <div class="chip" style="background:#b6541a; height:38px"></div>
+          </div>
+          <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:12px; line-height:1.55">Warm bone, slight contrast lift. Use only for marketing surfaces.</p>
+        </div>
+        <div class="palette-card alt">
+          <div class="eyebrow" style="margin-bottom:6px">Alternate · slate</div>
+          <h4 style="font-family:var(--serif); font-size:18px; margin-bottom:14px">Slate Modern</h4>
+          <div class="palette-grid" style="grid-template-columns:repeat(7, 1fr); gap:6px">
+            <div class="chip" style="background:#f3f4f6; height:38px"></div>
+            <div class="chip" style="background:#ffffff; height:38px"></div>
+            <div class="chip" style="background:#0e1726; height:38px"></div>
+            <div class="chip" style="background:#6b7280; height:38px"></div>
+            <div class="chip" style="background:#b42318; height:38px"></div>
+            <div class="chip" style="background:#067647; height:38px"></div>
+            <div class="chip" style="background:#2a4cb8; height:38px"></div>
+          </div>
+          <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:12px; line-height:1.55">Cool, conventional fintech read. Reserve for enterprise mode.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="eyebrow" style="margin-bottom:10px">Semantics</div>
+        <table class="tokens">
+          <tr><td><span class="sw" style="background:#7a1d1d"></span><code>--debit</code></td><td>Money leaving. Negative deltas. Cost-of lines. Overvalued signal.</td></tr>
+          <tr><td><span class="sw" style="background:#2a5a2a"></span><code>--credit</code></td><td>Money arriving. Positive deltas. Profit lines. Undervalued signal.</td></tr>
+          <tr><td><span class="sw" style="background:#8a5a1c"></span><code>--accent</code></td><td>Reserved emphasis — primary CTA on warm surfaces, "review" badges, callouts.</td></tr>
+          <tr><td><span class="sw" style="background:#e9d391"></span><code>--highlight</code></td><td>Editor focus, inline form fields, highlighted ledger rows.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  TYPE  ───────────── -->
+  <section id="type">
+    <div class="section-num">04</div>
+    <h2 class="section-h">Typography</h2>
+    <p class="section-lead">Source Serif 4 carries thought. JetBrains Mono carries fact. The two together give Reckonna its voice: a financial-textbook posture without spreadsheet body language.</p>
+
+    <div class="rule-block">
+      <div style="font-family:var(--serif); font-size:96px; line-height:0.98; letter-spacing:-0.025em; margin-bottom:8px">
+        Quarterly review.
+      </div>
+      <div style="font-family:var(--serif); font-style:italic; font-size:96px; line-height:0.98; letter-spacing:-0.025em; color:var(--ink-3); margin-bottom:32px">
+        With confidence.
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Serif · Source Serif 4</div>
+          <div class="type-line"><span class="lab">H1 · 48/52</span><span class="smp" style="font-size:48px; line-height:1.05">Statement</span></div>
+          <div class="type-line"><span class="lab">H2 · 32/36</span><span class="smp" style="font-size:32px">Statement</span></div>
+          <div class="type-line"><span class="lab">H3 · 22/28</span><span class="smp" style="font-size:22px">Statement</span></div>
+          <div class="type-line"><span class="lab">H4 · 16/22</span><span class="smp" style="font-size:16px">Statement</span></div>
+          <div class="type-line"><span class="lab">Italic · 18</span><span class="smp" style="font-size:18px; font-style:italic; color:var(--ink-2)">Statement</span></div>
+        </div>
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Mono · JetBrains Mono</div>
+          <div class="type-line mono"><span class="lab">Display · 28</span><span class="smp" style="font-size:28px; font-weight:600">$ 12,847.<span style="color:var(--ink-3)">00</span></span></div>
+          <div class="type-line mono"><span class="lab">Heading · 16</span><span class="smp" style="font-size:16px; font-weight:600">$ 12,847.00</span></div>
+          <div class="type-line mono"><span class="lab">Body · 13.5</span><span class="smp" style="font-size:13.5px">$ 12,847.00</span></div>
+          <div class="type-line mono"><span class="lab">Caption · 11</span><span class="smp" style="font-size:11px; color:var(--ink-3)">$ 12,847.00</span></div>
+          <div class="type-line mono"><span class="lab">Eyebrow · 10.5</span><span class="smp" style="font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-3)">SECTION LABEL</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:28px" class="grid-2">
+        <div>
+          <h3 style="font-size:20px; margin-bottom:8px">Pairing in body</h3>
+          <p style="font-family:var(--mono); font-size:13px; line-height:1.7; color:var(--ink-2)">
+            Headings, sentences, and quoted notes go in serif. Numbers, IDs, account codes, ledger memos,
+            navigation, and buttons go in mono. Italic serif (12–13px) is reserved for editorial subtitles
+            and inline "Reckonna note" voice.
+          </p>
+        </div>
+        <div>
+          <h3 style="font-size:20px; margin-bottom:8px">Numerals</h3>
+          <div style="font-family:var(--mono); font-size:18px; line-height:1.7; font-variant-numeric:tabular-nums slashed-zero">
+            0 1 2 3 4 5 6 7 8 9<br/>
+            $ 12,847.00  /  −3,416.50<br/>
+            <span style="color:var(--credit)">+ 18.4 %</span> · <span style="color:var(--debit)">− 2.1 %</span> · EPS 4.12
+          </div>
+          <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:8px">Always tabular. Always slashed zero. Currency symbol carries its own thin space.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  SPACING  ───────────── -->
+  <section id="spacing">
+    <div class="section-num">05</div>
+    <h2 class="section-h">Spacing &amp; radii</h2>
+    <p class="section-lead">Tight rhythm. Predictable rules. Density adjusts uniformly via three modes.</p>
+
+    <div class="rule-block grid-2">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Radius scale</div>
+        <div style="display:flex; gap:14px; align-items:flex-end">
+          <div style="text-align:center"><div style="width:64px; height:64px; background:var(--ink); border-radius:4px"></div><div style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:6px">4 · sm</div></div>
+          <div style="text-align:center"><div style="width:64px; height:64px; background:var(--ink); border-radius:6px"></div><div style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:6px">6 · md</div></div>
+          <div style="text-align:center"><div style="width:64px; height:64px; background:var(--ink); border-radius:10px"></div><div style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:6px">10 · lg</div></div>
+        </div>
+        <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:12px; line-height:1.6">
+          Cards: <code>md</code>. Inputs &amp; buttons: <code>sm</code>. Hero panels and onboarding cards: <code>lg</code>. Never pill-shape; this is a ledger product.
+        </p>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Density modes</div>
+        <table class="tokens">
+          <tr><th>Mode</th><th>Card pad</th><th>Row pad</th><th>Body</th></tr>
+          <tr><td><code>compact</code></td><td>14</td><td>8 · 12</td><td>12.5</td></tr>
+          <tr><td><code>cozy</code></td><td>20</td><td>12 · 16</td><td>13.5</td></tr>
+          <tr><td><code>roomy</code></td><td>28</td><td>16 · 20</td><td>14.5</td></tr>
+        </table>
+        <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:12px; line-height:1.6">
+          Default <code>cozy</code>. Compact for power-user ledger sessions; roomy for onboarding and reports.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  COMPONENTS  ───────────── -->
+  <section id="components">
+    <div class="section-num">06</div>
+    <h2 class="section-h">Components</h2>
+    <p class="section-lead">Buttons, badges, fields, and tiles — the vocabulary every screen is built from.</p>
+
+    <div class="rule-block" style="display:flex; flex-direction:column; gap:16px">
+
+      <!-- Buttons -->
+      <div class="spec">
+        <div>
+          <div class="eyebrow" style="margin-bottom:12px">Buttons</div>
+          <div class="spec-stage">
+            <span class="btn">Post entry →</span>
+            <span class="btn secondary">Save draft</span>
+            <span class="btn ghost">Cancel</span>
+            <span class="btn accent">Reconcile</span>
+          </div>
+        </div>
+        <div class="spec-notes">
+          <b>Primary</b> — one per view. Solid ink.<br/>
+          <b>Secondary</b> — outlined, ink rule.<br/>
+          <b>Ghost</b> — hairline, for low-emphasis.<br/>
+          <b>Accent</b> — copper, only on warm surfaces.
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="spec">
+        <div>
+          <div class="eyebrow" style="margin-bottom:12px">Status badges</div>
+          <div class="spec-stage">
+            <span class="badge draft">Draft</span>
+            <span class="badge review">In review</span>
+            <span class="badge posted">Posted</span>
+            <span class="badge flagged">Needs attention</span>
+          </div>
+        </div>
+        <div class="spec-notes">
+          One word, uppercase, 10/12 mono. Color = state semantic.
+          Never combine more than one badge per row.
+        </div>
+      </div>
+
+      <!-- Inputs -->
+      <div class="spec">
+        <div>
+          <div class="eyebrow" style="margin-bottom:12px">Inputs</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%">
+            <label class="field"><span>Vendor</span><input value="Linear Software, Inc." /></label>
+            <label class="field"><span>Amount · USD</span><input class="right" value="384.00" /></label>
+          </div>
+        </div>
+        <div class="spec-notes">
+          Single hairline border, no inner shadow. Numeric inputs right-align and use tabular figures.
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="spec">
+        <div>
+          <div class="eyebrow" style="margin-bottom:12px">KPI tile</div>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; width:100%">
+            <div class="kpi">
+              <div class="lab"><span class="eyebrow">Cash on hand</span><span style="font-family:var(--mono); font-size:11px; color:var(--credit)">+ 3.4%</span></div>
+              <div class="val">$ 84,210.18</div>
+              <div class="bars">
+                <i style="height:8px"></i><i style="height:10px"></i><i style="height:9px"></i><i style="height:14px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:16px"></i><i style="height:18px"></i><i style="height:20px"></i><i style="height:19px"></i><i style="height:22px"></i><i style="height:24px"></i>
+              </div>
+            </div>
+            <div class="kpi">
+              <div class="lab"><span class="eyebrow">Receivables</span><span style="font-family:var(--mono); font-size:11px; color:var(--debit)">− 1.1%</span></div>
+              <div class="val">$ 12,640.00</div>
+              <div class="bars">
+                <i style="height:22px"></i><i style="height:21px"></i><i style="height:19px"></i><i style="height:18px"></i><i style="height:16px"></i><i style="height:15px"></i><i style="height:13px"></i><i style="height:12px"></i><i style="height:11px"></i><i style="height:10px"></i><i style="height:9px"></i><i style="height:8px"></i>
+              </div>
+            </div>
+            <div class="kpi">
+              <div class="lab"><span class="eyebrow">Burn · 30d</span><span style="font-family:var(--mono); font-size:11px; color:var(--debit)">+ 0.8%</span></div>
+              <div class="val">$ 9,318.00</div>
+              <div class="bars">
+                <i style="height:14px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:17px"></i><i style="height:16px"></i><i style="height:18px"></i><i style="height:17px"></i><i style="height:19px"></i><i style="height:18px"></i><i style="height:20px"></i><i style="height:19px"></i><i style="height:21px"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec-notes">
+          Three tiles per row at desktop; two on tablet; one on mobile.
+          Sparkline at 50% opacity — supports the number, doesn't compete.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  PATTERNS  ───────────── -->
+  <section id="patterns">
+    <div class="section-num">07</div>
+    <h2 class="section-h">Patterns</h2>
+    <p class="section-lead">Recurring compositions: the ledger row, the fair-value indicator, the Reckonna note.</p>
+
+    <div class="rule-block">
+      <div class="eyebrow" style="margin-bottom:10px">Ledger row</div>
+      <div class="ledger">
+        <div class="row">
+          <span style="color:var(--ink-3)">May 24</span>
+          <span>Stripe payout · 14 invoices</span>
+          <span style="color:var(--ink-2); font-size:11px">4101 · Revenue</span>
+          <span class="badge posted">posted</span>
+          <span class="num credit tabular">+ 4,200.00</span>
+        </div>
+        <div class="row">
+          <span style="color:var(--ink-3)">May 24</span>
+          <span>Linear · annual seat</span>
+          <span style="color:var(--ink-2); font-size:11px">6210 · Software</span>
+          <span class="badge review">review</span>
+          <span class="num debit tabular">−   384.00</span>
+        </div>
+        <div class="row" style="background:color-mix(in oklab, var(--debit) 4%, transparent)">
+          <span style="color:var(--ink-3)">May 24</span>
+          <span>J. Cho · contractor pay</span>
+          <span style="color:var(--ink-2); font-size:11px">6010 · Contractors</span>
+          <span class="badge flagged">flagged</span>
+          <span class="num debit tabular">− 1,763.40</span>
+        </div>
+      </div>
+
+      <div style="margin-top:28px" class="grid-2">
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Fair-value indicator</div>
+          <div class="card" style="padding:18px">
+            <div style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-bottom:8px">MSFT · $ 442 today · fair $ 384</div>
+            <div style="position:relative; height:32px">
+              <div style="height:6px; background:var(--bg-elev); border-radius:3px; margin-top:14px; position:relative">
+                <div style="position:absolute; left:0; width:46%; height:100%; background:color-mix(in oklab, var(--credit) 30%, transparent); border-radius:3px 0 0 3px"></div>
+                <div style="position:absolute; left:46%; right:0; height:100%; background:color-mix(in oklab, var(--debit) 30%, transparent); border-radius:0 3px 3px 0"></div>
+                <div style="position:absolute; left:46%; top:-4px; width:1px; height:14px; background:var(--ink)"></div>
+                <div style="position:absolute; left:65%; top:-10px; transform:translateX(-50%); width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--ink)"></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:4px">
+              <span>under</span><span>fair</span><span>over</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px">Reckonna note</div>
+          <div class="card" style="padding:20px; background:var(--ink); color:var(--bg)">
+            <div style="font-family:var(--serif); font-style:italic; font-size:13px; opacity:0.7; margin-bottom:6px">— Reckonna note</div>
+            <div style="font-family:var(--serif); font-size:18px; line-height:1.35">
+              Your April books are ready to close. We've drafted the entries; review takes about 4 minutes.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:28px">
+        <div class="eyebrow" style="margin-bottom:10px">Sentence-shaped capture</div>
+        <div class="card" style="padding:24px">
+          <div style="font-family:var(--serif); font-size:22px; line-height:1.6">
+            On <span style="background:color-mix(in oklab, var(--highlight) 40%, transparent); border-bottom:1.5px solid var(--ink); font-style:italic; padding:0 8px">May 24, 2026</span>
+            I <span style="background:color-mix(in oklab, var(--highlight) 40%, transparent); border-bottom:1.5px solid var(--ink); font-style:italic; padding:0 8px">paid</span>
+            <span style="background:color-mix(in oklab, var(--highlight) 40%, transparent); border-bottom:1.5px solid var(--ink); font-family:var(--mono); font-size:18px; padding:0 8px; font-variant-numeric:tabular-nums">$ 384.00</span>
+            to <span style="background:color-mix(in oklab, var(--highlight) 40%, transparent); border-bottom:1.5px solid var(--ink); font-style:italic; padding:0 8px">Linear, Inc.</span>
+          </div>
+          <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:14px; line-height:1.6">
+            The defining anti-spreadsheet pattern: a fluent sentence whose blanks are also the form fields.
+            Cursor moves left-to-right; meaning carries from the reading order; nothing about it suggests a grid.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  VOICE  ───────────── -->
+  <section id="voice">
+    <div class="section-num">08</div>
+    <h2 class="section-h">Voice</h2>
+    <p class="section-lead">Plain-language and reassuring. Clear, concise, operational. Never judgmental, never overly corporate.</p>
+
+    <div class="rule-block grid-2">
+      <div class="card" style="padding:22px">
+        <div class="eyebrow" style="color:var(--credit); margin-bottom:10px">Yes</div>
+        <ul style="font-family:var(--mono); font-size:13px; line-height:1.8; color:var(--ink-2); margin:0; padding-left:16px">
+          <li>"Your April books are ready to close."</li>
+          <li>"Reckonna matched this to a Mercury line, same day."</li>
+          <li>"Today's price is about 15% above fair value."</li>
+          <li>"Signals are model outputs, not advice."</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="eyebrow" style="color:var(--debit); margin-bottom:10px">No</div>
+        <ul style="font-family:var(--mono); font-size:13px; line-height:1.8; color:var(--ink-2); margin:0; padding-left:16px">
+          <li>"AUDIT REQUIRED" · audit-coded language</li>
+          <li>"You forgot to categorize 4 entries" · scolding</li>
+          <li>"Unlock premium analytics" · upsell jargon</li>
+          <li>Emoji or exclamation marks</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────  TOKENS  ───────────── -->
+  <section id="tokens">
+    <div class="section-num">09</div>
+    <h2 class="section-h">Tokens</h2>
+    <p class="section-lead">Drop-in CSS custom properties. All screens read from these — never hardcode hex or px.</p>
+
+    <div class="rule-block">
+      <table class="tokens">
+        <tr><th colspan="3">Surface · Forest Reserve</th></tr>
+        <tr><td><span class="sw" style="background:#efece1"></span><code>--bg</code></td><td>#EFECE1</td><td>Page background — warm cream</td></tr>
+        <tr><td><span class="sw" style="background:#e2dccb"></span><code>--bg-elev</code></td><td>#E2DCCB</td><td>Sidebar / elevated panels</td></tr>
+        <tr><td><span class="sw" style="background:#faf7ec"></span><code>--surface</code></td><td>#FAF7EC</td><td>Cards / sheets</td></tr>
+        <tr><th colspan="3">Ink</th></tr>
+        <tr><td><span class="sw" style="background:#11201a"></span><code>--ink</code></td><td>#11201A</td><td>Primary text · primary CTA fill</td></tr>
+        <tr><td><span class="sw" style="background:#324138"></span><code>--ink-2</code></td><td>#324138</td><td>Secondary text · sentences in mono</td></tr>
+        <tr><td><span class="sw" style="background:#6d6b58"></span><code>--ink-3</code></td><td>#6D6B58</td><td>Metadata · captions · eyebrows</td></tr>
+        <tr><td><span class="sw" style="background:rgba(17,32,26,0.12)"></span><code>--rule-soft</code></td><td>rgba</td><td>Filter chips, soft separators</td></tr>
+        <tr><td><span class="sw" style="background:rgba(17,32,26,0.07)"></span><code>--hairline</code></td><td>rgba</td><td>Card borders, row dividers</td></tr>
+        <tr><th colspan="3">Semantic</th></tr>
+        <tr><td><span class="sw" style="background:#7a1d1d"></span><code>--debit</code></td><td>#7A1D1D</td><td>Negative · outflows · overvalued</td></tr>
+        <tr><td><span class="sw" style="background:#2a5a2a"></span><code>--credit</code></td><td>#2A5A2A</td><td>Positive · inflows · undervalued</td></tr>
+        <tr><td><span class="sw" style="background:#8a5a1c"></span><code>--accent</code></td><td>#8A5A1C</td><td>Copper · accent CTA · in-review</td></tr>
+        <tr><td><span class="sw" style="background:#e9d391"></span><code>--highlight</code></td><td>#E9D391</td><td>Form focus · editor highlights</td></tr>
+        <tr><th colspan="3">Type</th></tr>
+        <tr><td><code>--serif</code></td><td>'Source Serif 4'</td><td>Display, headings, italic notes</td></tr>
+        <tr><td><code>--mono</code></td><td>'JetBrains Mono'</td><td>Body, data, UI chrome, numerals</td></tr>
+        <tr><th colspan="3">Radii</th></tr>
+        <tr><td><code>--r-sm</code></td><td>4px</td><td>Buttons, inputs, chips</td></tr>
+        <tr><td><code>--r-md</code></td><td>6px</td><td>Cards, panels</td></tr>
+        <tr><td><code>--r-lg</code></td><td>10px</td><td>Hero blocks, onboarding</td></tr>
+      </table>
+
+      <p style="font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:18px; line-height:1.6">
+        Three palettes (forest · ink · slate) share the same token names; switching <code>data-palette</code>
+        on <code>&lt;body&gt;</code> re-themes the entire product. Density follows the same pattern via <code>data-density</code>.
+      </p>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <span>Reckonna · Design System v0.1 · 2026·05·25</span>
+  <span>Single-file reference  ·  print-ready</span>
+</footer>
+
+</body>
+</html>

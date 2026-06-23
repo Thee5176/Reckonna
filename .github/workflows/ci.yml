@@ -1,0 +1,149 @@
+# CI — injection-safe. Notes:
+#   go/e2e jobs guard the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
+#   Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
+# ---------------------------------------------------------------------------------------------------
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: "1.23"
+  NODE_VERSION: "20"
+
+jobs:
+  backend:
+    name: Go build · test -race · lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - id: detect
+        run: |
+          if [ -n "$(go list ./... 2>/dev/null)" ]; then echo "has_go=true" >> "$GITHUB_OUTPUT";
+          else echo "has_go=false" >> "$GITHUB_OUTPUT"; echo "No Go packages yet — skipping build/test/lint"; fi
+      - if: steps.detect.outputs.has_go == 'true'
+        run: go build ./...
+      - if: steps.detect.outputs.has_go == 'true'
+        run: go test ./... -race
+      - if: steps.detect.outputs.has_go == 'true'
+        uses: golangci/golangci-lint-action@v6
+        with: { version: v1.62.2 }
+
+  frontend:
+    name: Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ env.NODE_VERSION }}" }
+      - run: npm ci || npm install
+      - run: npm test -- --watchAll=false --passWithNoTests
+
+  e2e:
+    name: E2E (testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - id: detect
+        run: |
+          if [ -n "$(go list -tags e2e ./e2e/... 2>/dev/null)" ]; then echo "has_e2e=true" >> "$GITHUB_OUTPUT";
+          else echo "has_e2e=false" >> "$GITHUB_OUTPUT"; echo "No e2e packages yet — skipping"; fi
+      - if: steps.detect.outputs.has_e2e == 'true'
+        run: go test -tags e2e ./e2e/... -count=1
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.9.8" }
+      - run: terraform -chdir=infra init -backend=false
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra validate
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  sonar:
+    name: SonarQube
+    # Runs on self-hosted runner inside homelab cluster to bypass Cloudflare bot challenge
+    # on vault.thee5176.com. Uses internal cluster DNS for Vault + Sonar.
+    # Pre-reqs (configure in GitHub repo settings → Secrets and variables → Actions):
+    #   Variables: SONAR_ENABLED=true
+    #              VAULT_INTERNAL_URL (optional, default http://vault.vault.svc.cluster.local:8200)
+    #              SONAR_INTERNAL_URL (optional, default http://sonar.sonarqube.svc.cluster.local:9000)
+    #   Secrets:   VAULT_ROLE_ID, VAULT_SECRET_ID  (from CI-only AppRole `ci-reckonna`
+    #              with read scope on secret/data/homelab/sonar/ci-token only)
+    # Only run on push OR same-repo PRs — never on fork PRs (untrusted code on self-hosted runner).
+    # workflow_dispatch restricted to main/develop refs so untrusted topic branches
+    # cannot exfiltrate Vault SecretID via the self-hosted runner.
+    if: >-
+      ${{ vars.SONAR_ENABLED == 'true' &&
+          (github.event_name == 'push' ||
+           (github.event_name == 'workflow_dispatch' &&
+            (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) ||
+           (github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: [self-hosted, tailscale]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token), internal cluster DNS
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ vars.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/data/homelab/sonar/ci-token token | SONAR_TOKEN
+      - uses: SonarSource/sonarqube-scan-action@v4
+        env:                                  # vault-sourced env via prior step
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
+
+  # Always-run gate so `Sonar gate` can be a REQUIRED status check without
+  # hanging PRs. The `sonar` job above is skippable (SONAR_ENABLED gate + the
+  # same-repo-PR fork guard). A required check that gets skipped never reports
+  # and blocks the merge "pending" forever — so we require this gate instead.
+  # if: always() makes it run even when `sonar` is skipped; it passes on
+  # success OR skipped, and fails only on a real Sonar failure/cancellation.
+  sonar-gate:
+    name: Sonar gate
+    needs: [sonar]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate SonarQube job result
+        run: |
+          result='${{ needs.sonar.result }}'
+          echo "SonarQube job result: $result"
+          case "$result" in
+            success|skipped)
+              echo "Gate OK — SonarQube passed or was intentionally skipped."
+              exit 0 ;;
+            *)
+              echo "Gate FAIL — SonarQube result: $result"
+              exit 1 ;;
+          esac
