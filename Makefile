@@ -16,7 +16,7 @@ gen-coa: ## Generate CoA seed + locale stubs from config/coa.yaml (validates vs 
 	@go run ./scripts/gen-coa 2>/dev/null || echo "gen-coa: stub — implement in plan 01 S5a"
 
 generate: ## sqlc codegen + CoA generation
-	@if compgen -G "db/query/*.sql" >/dev/null; then sqlc generate; else echo "generate: no db/query/*.sql yet — skipping sqlc (plan 01)"; fi
+	@if find db/query -type f -name '*.sql' -print -quit 2>/dev/null | grep -q .; then sqlc generate; else echo "generate: no db/query/**/*.sql yet — skipping sqlc (plan 01)"; fi
 	@$(MAKE) gen-coa
 
 migrate: ## Apply DB migrations (up)

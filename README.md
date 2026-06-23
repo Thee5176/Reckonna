@@ -1,5 +1,9 @@
 # Accounting CQRS — Go/Gin rewrite (Claude Code working directory)
 
+[![Quality Gate Status](https://sonar.thee5176.com/api/project_badges/measure?project=reckonna&metric=alert_status&token=sqb_25053392f3db17cc5bd4d723139d0bc9492bf8ed)](https://sonar.thee5176.com/dashboard?id=reckonna)
+[![Technical Debt](https://sonar.thee5176.com/api/project_badges/measure?project=reckonna&metric=software_quality_maintainability_remediation_effort&token=sqb_25053392f3db17cc5bd4d723139d0bc9492bf8ed)](https://sonar.thee5176.com/dashboard?id=reckonna)
+[![Security Issues](https://sonar.thee5176.com/api/project_badges/measure?project=reckonna&metric=software_quality_security_issues&token=sqb_25053392f3db17cc5bd4d723139d0bc9492bf8ed)](https://sonar.thee5176.com/dashboard?id=reckonna)
+
 V-model applied INTO an agent swarm. Source of truth: Confluence
 "Claude Code Setup — V-Model × Swarm (3 head agents · V-phase skills · plugins core)".
 

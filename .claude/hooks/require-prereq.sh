@@ -15,7 +15,7 @@ case "$FILE" in
       exit 2
     fi ;;
   app/*|components/*)
-    if [ ! -f "$DESIGN" ] || ! grep -qi 'approved' "$DESIGN" 2>/dev/null; then
+    if [ ! -f "$DESIGN" ] || ! grep -qiE 'status:[[:space:]]*approved' "$DESIGN" 2>/dev/null; then
       echo "Frontend blocked: run /plan STEP 2 — approved HTML design system required ($DESIGN)." >&2
       exit 2
     fi ;;
