@@ -1,7 +1,6 @@
-# PROPOSED ci.yml (fixes the first CI run). Injection-safe. Apply with:
-#     mv docs/ci-workflow.proposed.yml .github/workflows/ci.yml && git add -A && git commit && git push
-# Fixes: guard go/e2e for the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
-# Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
+# CI — injection-safe. Notes:
+#   go/e2e jobs guard the empty module (skip→pass until code lands); gitleaks needs GITHUB_TOKEN;
+#   Sonar gated behind repo var SONAR_ENABLED (set it + Vault AppRole later) so it's not a false-red.
 # ---------------------------------------------------------------------------------------------------
 name: CI
 on:
@@ -90,8 +89,8 @@ jobs:
     # on vault.thee5176.com. Uses internal cluster DNS for Vault + Sonar.
     # Pre-reqs (configure in GitHub repo settings → Secrets and variables → Actions):
     #   Variables: SONAR_ENABLED=true
-    #              VAULT_INTERNAL_URL (required; e.g. https://vault.vault.svc.cluster.local:8200)
-    #              SONAR_INTERNAL_URL (required; e.g. https://sonar.sonarqube.svc.cluster.local:9000)
+    #              VAULT_INTERNAL_URL (optional, default http://vault.vault.svc.cluster.local:8200)
+    #              SONAR_INTERNAL_URL (optional, default http://sonar.sonarqube.svc.cluster.local:9000)
     #   Secrets:   VAULT_ROLE_ID, VAULT_SECRET_ID  (from CI-only AppRole `ci-reckonna`
     #              with read scope on secret/data/homelab/sonar/ci-token only)
     # Only run on push OR same-repo PRs — never on fork PRs (untrusted code on self-hosted runner).
@@ -112,7 +111,7 @@ jobs:
       - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token), internal cluster DNS
         uses: hashicorp/vault-action@v3
         with:
-          url: ${{ vars.VAULT_INTERNAL_URL }}
+          url: ${{ vars.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
           method: approle
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
@@ -121,4 +120,29 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@v4
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL }}
+          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
+
+  # Always-run gate so `Sonar gate` can be a REQUIRED status check without
+  # hanging PRs. The `sonar` job above is skippable (SONAR_ENABLED gate + the
+  # same-repo-PR fork guard). A required check that gets skipped never reports
+  # and blocks the merge "pending" forever — so we require this gate instead.
+  # if: always() makes it run even when `sonar` is skipped; it passes on
+  # success OR skipped, and fails only on a real Sonar failure/cancellation.
+  sonar-gate:
+    name: Sonar gate
+    needs: [sonar]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate SonarQube job result
+        run: |
+          result='${{ needs.sonar.result }}'
+          echo "SonarQube job result: $result"
+          case "$result" in
+            success|skipped)
+              echo "Gate OK — SonarQube passed or was intentionally skipped."
+              exit 0 ;;
+            *)
+              echo "Gate FAIL — SonarQube result: $result"
+              exit 1 ;;
+          esac
