@@ -49,12 +49,15 @@ docs-verify: ## Anti-drift: openapi lints + ERD matches schema
 
 ci: tools-verify build test lint k8s-validate tf-validate ## Local mirror of the CI gates
 
-k8s-validate: ## kubeconform -strict on every infra/k8s manifest (skips when tool absent)
-	@if command -v kubeconform >/dev/null 2>&1; then \
-	  find infra/k8s -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 \
-	    | xargs -0 -r kubeconform -strict -ignore-missing-schemas; \
+k8s-validate: ## kubeconform -strict on the kustomize render of each infra/k8s base (skips when tools absent)
+	@if command -v kubeconform >/dev/null 2>&1 && command -v kubectl >/dev/null 2>&1; then \
+	  set -o pipefail; \
+	  for base in infra/k8s/postgres infra/k8s/tailscale; do \
+	    echo "k8s-validate: rendering $$base"; \
+	    kubectl kustomize "$$base" | kubeconform -strict -ignore-missing-schemas -summary || exit 1; \
+	  done; \
 	else \
-	  echo "k8s-validate: kubeconform not installed — skipping (CI gate)"; \
+	  echo "k8s-validate: kubeconform or kubectl not installed — skipping (CI gate)"; \
 	fi
 
 tf-validate: ## terraform fmt + validate on infra/ (skips when tool absent)

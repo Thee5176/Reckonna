@@ -31,6 +31,15 @@ esac
 EOF
 chmod +x "$TMP/tailscale"
 
+# Fake kubectl that always fails to resolve — so the negative cases below cannot
+# fall through to a live homelab kubeconfig (resolve_from_kubectl) and spuriously
+# succeed. Mirrors how pg-probe_test isolates psql/getent via $TMP shims.
+cat >"$TMP/kubectl" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$TMP/kubectl"
+
 export PATH="$TMP:$PATH"
 
 # 1. full mode prints hostname + ip
@@ -52,7 +61,7 @@ echo "$out" | grep -q '^ip=100.64.10.5$' \
 [[ "$("$SCRIPT" --url)" == "postgres://pg-reckonna.tail-test.ts.net:5432/" ]] \
   || { echo "FAIL: --url"; exit 1; }
 
-# 5. unknown peer → exit 3.
+# 5. unknown peer (tailscale up, device absent) → kubectl fallback neutralized → exit 3.
 RECKONNA_PG_DEVICE="ghost-peer" "$SCRIPT" >/dev/null 2>&1 && \
   { echo "FAIL: missing device should exit non-zero"; exit 1; } || true
 
