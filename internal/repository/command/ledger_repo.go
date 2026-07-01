@@ -54,39 +54,56 @@ func PersistEntry(ctx context.Context, q *Queries, e *domain.JournalEntry, bookI
 // existing entry header (used by both create and the replace-on-update path).
 func PersistLines(ctx context.Context, q *Queries, e *domain.JournalEntry, accByCode map[int]uuid.UUID) error {
 	for i, l := range e.Lines {
-		lineID, err := uuid.NewV7()
+		lineID, err := insertLine(ctx, q, e.ID, i, l, accByCode)
 		if err != nil {
-			return fmt.Errorf("new line id: %w", err)
+			return err
 		}
-		if err := q.InsertJournalLine(ctx, InsertJournalLineParams{
-			ID:             lineID,
-			JournalEntryID: e.ID,
-			AccountID:      accByCode[l.Account.Code],
-			Side:           sideToDB(l.Side),
-			Amount:         l.Amount.Decimal(),
-			LineNo:         int32(i + 1),
-		}); err != nil {
-			return fmt.Errorf("insert journal_line %d: %w", i, err)
+		if err := insertLineDimensions(ctx, q, lineID, l.Dimensions); err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		for dt, dv := range l.Dimensions {
-			res, err := q.GetDimensionValue(ctx, GetDimensionValueParams{
-				TypeCode:  string(dt),
-				ValueCode: dv,
-			})
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return fmt.Errorf("%w: %s=%s", ErrUnknownDimension, dt, dv)
-				}
-				return fmt.Errorf("resolve dimension %s=%s: %w", dt, dv, err)
+// insertLine writes a single posting and returns its UUIDv7 line id.
+func insertLine(ctx context.Context, q *Queries, entryID uuid.UUID, idx int, l domain.JournalLine, accByCode map[int]uuid.UUID) (uuid.UUID, error) {
+	lineID, err := uuid.NewV7()
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("new line id: %w", err)
+	}
+	if err := q.InsertJournalLine(ctx, InsertJournalLineParams{
+		ID:             lineID,
+		JournalEntryID: entryID,
+		AccountID:      accByCode[l.Account.Code],
+		Side:           sideToDB(l.Side),
+		Amount:         l.Amount.Decimal(),
+		LineNo:         int32(idx + 1), //#nosec G115 -- idx is a journal-line slice index, always small
+	}); err != nil {
+		return uuid.Nil, fmt.Errorf("insert journal_line %d: %w", idx, err)
+	}
+	return lineID, nil
+}
+
+// insertLineDimensions resolves each (type, value) code pair for a line and
+// writes the dimension rows. An unknown dimension value → ErrUnknownDimension.
+func insertLineDimensions(ctx context.Context, q *Queries, lineID uuid.UUID, dims map[domain.DimensionType]string) error {
+	for dt, dv := range dims {
+		res, err := q.GetDimensionValue(ctx, GetDimensionValueParams{
+			TypeCode:  string(dt),
+			ValueCode: dv,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("%w: %s=%s", ErrUnknownDimension, dt, dv)
 			}
-			if err := q.InsertJournalLineDimension(ctx, InsertJournalLineDimensionParams{
-				JournalLineID:    lineID,
-				DimensionTypeID:  res.TypeID,
-				DimensionValueID: res.ValueID,
-			}); err != nil {
-				return fmt.Errorf("insert journal_line_dimension: %w", err)
-			}
+			return fmt.Errorf("resolve dimension %s=%s: %w", dt, dv, err)
+		}
+		if err := q.InsertJournalLineDimension(ctx, InsertJournalLineDimensionParams{
+			JournalLineID:    lineID,
+			DimensionTypeID:  res.TypeID,
+			DimensionValueID: res.ValueID,
+		}); err != nil {
+			return fmt.Errorf("insert journal_line_dimension: %w", err)
 		}
 	}
 	return nil

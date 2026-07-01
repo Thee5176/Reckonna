@@ -65,46 +65,15 @@ func NewLedgerCommandService(pool *pgxpool.Pool) *LedgerCommandService {
 // it plus the account-id map for persistence.
 func (s *LedgerCommandService) buildEntry(ctx context.Context, id uuid.UUID, in EntryInput) (*domain.JournalEntry, map[int]uuid.UUID, error) {
 	accByCode := make(map[int]uuid.UUID, len(in.Lines))
-	accMeta := make(map[int]command.GetAccountByCodeRow, len(in.Lines))
+	metaCache := make(map[int]command.GetAccountByCodeRow, len(in.Lines))
 	lines := make([]domain.JournalLine, 0, len(in.Lines))
 
 	for _, li := range in.Lines {
-		// A valid code is a 5-digit CoA code (§4 range, DB CHECK 10000..99999).
-		// Guard the range before narrowing to int32 so an out-of-range value can
-		// never wrap into a different valid code — it is simply unknown.
-		if li.AccountCode < 10000 || li.AccountCode > 99999 {
-			return nil, nil, fmt.Errorf("%w: %d", ErrUnknownAccountCode, li.AccountCode)
+		meta, err := s.resolveAccount(ctx, li.AccountCode, metaCache, accByCode)
+		if err != nil {
+			return nil, nil, err
 		}
-		meta, ok := accMeta[li.AccountCode]
-		if !ok {
-			row, err := s.q.GetAccountByCode(ctx, int32(li.AccountCode))
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return nil, nil, fmt.Errorf("%w: %d", ErrUnknownAccountCode, li.AccountCode)
-				}
-				return nil, nil, fmt.Errorf("resolve account %d: %w", li.AccountCode, err)
-			}
-			meta = row
-			accMeta[li.AccountCode] = row
-			accByCode[li.AccountCode] = row.ID
-		}
-
-		req := make([]domain.DimensionType, len(meta.RequiredDimensions))
-		for i, d := range meta.RequiredDimensions {
-			req[i] = domain.DimensionType(d)
-		}
-		lines = append(lines, domain.JournalLine{
-			Account: domain.Account{
-				Code:               int(meta.Code),
-				Type:               domain.AccountType(meta.Type),
-				NormalBalance:      domain.NormalBalance(meta.NormalBalance),
-				Postable:           meta.Postable,
-				RequiredDimensions: req,
-			},
-			Side:       li.Side,
-			Amount:     li.Amount,
-			Dimensions: li.Dimensions,
-		})
+		lines = append(lines, toDomainLine(meta, li))
 	}
 
 	entry, err := domain.NewEntry(id, in.Date, in.Description, in.Owner, in.Book, lines)
@@ -112,6 +81,48 @@ func (s *LedgerCommandService) buildEntry(ctx context.Context, id uuid.UUID, in 
 		return nil, nil, err
 	}
 	return entry, accByCode, nil
+}
+
+// resolveAccount validates the code is a 5-digit CoA code and resolves it to its
+// metadata, caching lookups and recording the code→id mapping. The range guard
+// also keeps the int32 narrowing safe (an out-of-range value is simply unknown).
+func (s *LedgerCommandService) resolveAccount(ctx context.Context, code int, cache map[int]command.GetAccountByCodeRow, ids map[int]uuid.UUID) (command.GetAccountByCodeRow, error) {
+	if code < 10000 || code > 99999 {
+		return command.GetAccountByCodeRow{}, fmt.Errorf("%w: %d", ErrUnknownAccountCode, code)
+	}
+	if meta, ok := cache[code]; ok {
+		return meta, nil
+	}
+	row, err := s.q.GetAccountByCode(ctx, int32(code))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return command.GetAccountByCodeRow{}, fmt.Errorf("%w: %d", ErrUnknownAccountCode, code)
+		}
+		return command.GetAccountByCodeRow{}, fmt.Errorf("resolve account %d: %w", code, err)
+	}
+	cache[code] = row
+	ids[code] = row.ID
+	return row, nil
+}
+
+// toDomainLine maps a resolved account row + input line to a domain JournalLine.
+func toDomainLine(meta command.GetAccountByCodeRow, li LineInput) domain.JournalLine {
+	req := make([]domain.DimensionType, len(meta.RequiredDimensions))
+	for i, d := range meta.RequiredDimensions {
+		req[i] = domain.DimensionType(d)
+	}
+	return domain.JournalLine{
+		Account: domain.Account{
+			Code:               int(meta.Code),
+			Type:               domain.AccountType(meta.Type),
+			NormalBalance:      domain.NormalBalance(meta.NormalBalance),
+			Postable:           meta.Postable,
+			RequiredDimensions: req,
+		},
+		Side:       li.Side,
+		Amount:     li.Amount,
+		Dimensions: li.Dimensions,
+	}
 }
 
 // PostLedger validates and atomically persists a new journal entry, returning
