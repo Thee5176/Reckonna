@@ -1,13 +1,15 @@
 // Package testsupport spins a Postgres for integration tests. It prefers a
 // container (testcontainers-go) so CI is hermetic, but reuses an existing DB
-// when RECKONNA_TEST_DATABASE_URL is set (fast local iteration). Each call
-// returns a freshly-migrated pool: the public schema is dropped and every
-// db/migration/*.up.sql is applied in order, so tests never share state.
+// when RECKONNA_TEST_DATABASE_URL is set (fast local iteration). Each call gets
+// its OWN uniquely-named schema (via search_path) that is migrated fresh and
+// dropped on cleanup — so tests, including parallel packages sharing one DB,
+// never collide.
 package testsupport
 
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -24,21 +27,28 @@ import (
 	"github.com/thee5176/reckonna/internal/config"
 )
 
-// NewPostgres returns a migrated pgx pool for a test, cleaning up on completion.
+// NewPostgres returns a migrated pgx pool bound to a fresh, isolated schema.
 func NewPostgres(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
 
-	dsn := os.Getenv("RECKONNA_TEST_DATABASE_URL")
-	if dsn == "" {
-		dsn = startContainer(t, ctx)
+	baseDSN := os.Getenv("RECKONNA_TEST_DATABASE_URL")
+	if baseDSN == "" {
+		baseDSN = startContainer(t, ctx)
 	}
+
+	schema := "t_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	dsn, err := withSearchPath(baseDSN, schema)
+	require.NoError(t, err)
 
 	pool, err := config.NewPool(ctx, dsn)
 	require.NoError(t, err, "open pool")
-	t.Cleanup(pool.Close)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DROP SCHEMA IF EXISTS "+schema+" CASCADE")
+		pool.Close()
+	})
 
-	require.NoError(t, resetAndMigrate(ctx, pool), "migrate")
+	require.NoError(t, migrateInto(ctx, pool, schema), "migrate")
 	return pool
 }
 
@@ -59,11 +69,24 @@ func startContainer(t *testing.T, ctx context.Context) string {
 	return dsn
 }
 
-// resetAndMigrate drops the schema and re-applies all up migrations so each test
-// starts clean. Multi-statement files run via the simple protocol (no args).
-func resetAndMigrate(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"); err != nil {
-		return fmt.Errorf("reset schema: %w", err)
+// withSearchPath returns dsn with a libpq `options=-c search_path=<schema>` so
+// every pooled connection resolves unqualified objects to the isolated schema.
+func withSearchPath(dsn, schema string) (string, error) {
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", fmt.Errorf("parse dsn: %w", err)
+	}
+	q := u.Query()
+	q.Set("options", "-c search_path="+schema)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+// migrateInto creates the schema and applies every up migration in order.
+// Multi-statement files run via the simple protocol (no args).
+func migrateInto(ctx context.Context, pool *pgxpool.Pool, schema string) error {
+	if _, err := pool.Exec(ctx, "CREATE SCHEMA IF NOT EXISTS "+schema); err != nil {
+		return fmt.Errorf("create schema: %w", err)
 	}
 	dir := filepath.Join(repoRoot(), "db", "migration")
 	entries, err := os.ReadDir(dir)

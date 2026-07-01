@@ -54,10 +54,38 @@ func (s *Service) BalanceSheet(ctx context.Context, owner string) (*BalanceSheet
 			view.Equity = append(view.Equity, lineBalance(int(r.Code), r.Name, bal))
 		}
 	}
+	// Current-period earnings (revenue − expenses) are unclosed and belong to
+	// equity. Without a closing entry the naive Assets == Liab + Equity identity
+	// would be off by exactly net income, so we fold it into equity here (a
+	// synthetic "Current period earnings" line, code 0). Closing entries are a
+	// later phase; until then this keeps the balance sheet balanced (AT6).
+	netIncome, err := s.netIncome(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+	if !netIncome.IsZero() {
+		view.Equity = append(view.Equity, lineBalance(0, "Current period earnings", netIncome))
+		totalLiabEquity = totalLiabEquity.Add(netIncome)
+	}
+
 	view.TotalAssets = totalAssets.StringFixed(4)
 	view.TotalLiabAndEquity = totalLiabEquity.StringFixed(4)
 	view.Balanced = totalAssets.Equal(totalLiabEquity)
 	return view, nil
+}
+
+// netIncome returns owner-scoped revenue − expenses as an exact decimal. It sums
+// net_credit over all P&L accounts (income positive, expense negative).
+func (s *Service) netIncome(ctx context.Context, owner string) (decimal.Decimal, error) {
+	rows, err := s.q.ProfitLoss(ctx, owner)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("net income: %w", err)
+	}
+	total := decimal.Zero
+	for _, r := range rows {
+		total = total.Add(r.NetCredit)
+	}
+	return total, nil
 }
 
 // ProfitLossView reports revenue, expenses, and net income (AT7).

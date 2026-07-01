@@ -2,9 +2,8 @@
 -- Naming per CoA governance standard §7: journal_entry (header) + journal_line
 -- (postings); account · book · dimension_type · dimension_value ·
 -- journal_line_dimension. UUIDv7 PKs are supplied by the Go app (google/uuid);
--- reference rows use gen_random_uuid(). Money is NUMERIC(20,4) — never float.
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;  -- gen_random_uuid() for reference rows
+-- reference rows use gen_random_uuid() (core since PG13 — no extension needed).
+-- Money is NUMERIC(20,4) — never float.
 
 -- ── Enumerated domains (mirror internal/domain constants) ──
 CREATE TYPE account_type        AS ENUM ('asset', 'liability', 'equity', 'income', 'expense');
