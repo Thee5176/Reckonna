@@ -1,0 +1,632 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`design-parity snapshots (S17) Badge lifecycle: badge-posted 1`] = `
+<View
+  style={
+    [
+      {
+        "alignSelf": "flex-start",
+        "borderRadius": 3,
+        "borderWidth": 1,
+        "paddingHorizontal": 7,
+        "paddingVertical": 2,
+      },
+      {
+        "borderColor": "rgba(42,90,42,0.3)",
+      },
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "fontWeight": "500",
+          "letterSpacing": 1.2,
+          "textTransform": "uppercase",
+        },
+        {
+          "color": "#2a5a2a",
+        },
+      ]
+    }
+  >
+    posted
+  </Text>
+</View>
+`;
+
+exports[`design-parity snapshots (S17) BalanceBar ok vs bad: balancebar-bad 1`] = `
+<View
+  accessibilityLabel="unbalanced"
+  style={
+    [
+      {
+        "alignItems": "center",
+        "backgroundColor": "#faf7ec",
+        "borderColor": "rgba(17,32,26,0.07)",
+        "borderRadius": 6,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "gap": 14,
+        "paddingHorizontal": 18,
+        "paddingVertical": 14,
+      },
+      {
+        "backgroundColor": "rgba(122,29,29,0.06)",
+        "borderColor": "rgba(122,29,29,0.45)",
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      借方 Debit
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          {
+            "color": "#7a1d1d",
+          },
+        ]
+      }
+    >
+      1000.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      貸方 Credit
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          {
+            "color": "#2a5a2a",
+          },
+        ]
+      }
+    >
+      500.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      Difference
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          {
+            "color": "#7a1d1d",
+          },
+        ]
+      }
+      testID="bar-diff"
+    >
+      500.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "borderRadius": 4,
+            "borderWidth": 1,
+            "paddingHorizontal": 12,
+            "paddingVertical": 6,
+          },
+          {
+            "borderColor": "rgba(122,29,29,0.45)",
+          },
+        ]
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "fontWeight": "600",
+              "letterSpacing": 0.4,
+            },
+            {
+              "color": "#7a1d1d",
+            },
+          ]
+        }
+      >
+        ✕ 借方≠貸方
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`design-parity snapshots (S17) BalanceBar ok vs bad: balancebar-ok 1`] = `
+<View
+  accessibilityLabel="balanced"
+  style={
+    [
+      {
+        "alignItems": "center",
+        "backgroundColor": "#faf7ec",
+        "borderColor": "rgba(17,32,26,0.07)",
+        "borderRadius": 6,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "gap": 14,
+        "paddingHorizontal": 18,
+        "paddingVertical": 14,
+      },
+      {
+        "backgroundColor": "rgba(42,90,42,0.06)",
+        "borderColor": "rgba(42,90,42,0.4)",
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      借方 Debit
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          {
+            "color": "#7a1d1d",
+          },
+        ]
+      }
+    >
+      1000.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      貸方 Credit
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          {
+            "color": "#2a5a2a",
+          },
+        ]
+      }
+    >
+      1000.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#6d6b58",
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 10,
+          "letterSpacing": 1,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      Difference
+    </Text>
+    <Text
+      style={
+        [
+          {
+            "color": "#11201a",
+            "fontFamily": "JetBrains Mono",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "marginTop": 2,
+          },
+          false,
+        ]
+      }
+      testID="bar-diff"
+    >
+      0.00
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": 10,
+      }
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "borderRadius": 4,
+            "borderWidth": 1,
+            "paddingHorizontal": 12,
+            "paddingVertical": 6,
+          },
+          {
+            "borderColor": "rgba(42,90,42,0.4)",
+          },
+        ]
+      }
+    >
+      <Text
+        style={
+          [
+            {
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "fontWeight": "600",
+              "letterSpacing": 0.4,
+            },
+            {
+              "color": "#2a5a2a",
+            },
+          ]
+        }
+      >
+        ✓ Balanced
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`design-parity snapshots (S17) Button variants: button-accent 1`] = `
+<View
+  accessibilityRole="button"
+  accessibilityState={
+    {
+      "busy": undefined,
+      "checked": undefined,
+      "disabled": false,
+      "expanded": undefined,
+      "selected": undefined,
+    }
+  }
+  accessibilityValue={
+    {
+      "max": undefined,
+      "min": undefined,
+      "now": undefined,
+      "text": undefined,
+    }
+  }
+  accessible={true}
+  collapsable={false}
+  focusable={true}
+  onBlur={[Function]}
+  onClick={[Function]}
+  onFocus={[Function]}
+  onResponderGrant={[Function]}
+  onResponderMove={[Function]}
+  onResponderRelease={[Function]}
+  onResponderTerminate={[Function]}
+  onResponderTerminationRequest={[Function]}
+  onStartShouldSetResponder={[Function]}
+  style={
+    [
+      {
+        "alignItems": "center",
+        "alignSelf": "flex-start",
+        "borderRadius": 4,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "paddingHorizontal": 16,
+        "paddingVertical": 9,
+      },
+      {
+        "backgroundColor": "#8a5a1c",
+        "borderColor": "#8a5a1c",
+      },
+      false,
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 12.5,
+          "fontWeight": "500",
+          "letterSpacing": 0.25,
+        },
+        {
+          "color": "#efece1",
+        },
+      ]
+    }
+  >
+    Review balance →
+  </Text>
+</View>
+`;
+
+exports[`design-parity snapshots (S17) Button variants: button-disabled 1`] = `
+<View
+  accessibilityRole="button"
+  accessibilityState={
+    {
+      "busy": undefined,
+      "checked": undefined,
+      "disabled": true,
+      "expanded": undefined,
+      "selected": undefined,
+    }
+  }
+  accessibilityValue={
+    {
+      "max": undefined,
+      "min": undefined,
+      "now": undefined,
+      "text": undefined,
+    }
+  }
+  accessible={true}
+  collapsable={false}
+  focusable={true}
+  onBlur={[Function]}
+  onClick={[Function]}
+  onFocus={[Function]}
+  onResponderGrant={[Function]}
+  onResponderMove={[Function]}
+  onResponderRelease={[Function]}
+  onResponderTerminate={[Function]}
+  onResponderTerminationRequest={[Function]}
+  onStartShouldSetResponder={[Function]}
+  style={
+    [
+      {
+        "alignItems": "center",
+        "alignSelf": "flex-start",
+        "borderRadius": 4,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "paddingHorizontal": 16,
+        "paddingVertical": 9,
+      },
+      {
+        "backgroundColor": "#11201a",
+        "borderColor": "#11201a",
+      },
+      {
+        "opacity": 0.4,
+      },
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 12.5,
+          "fontWeight": "500",
+          "letterSpacing": 0.25,
+        },
+        {
+          "color": "#efece1",
+        },
+      ]
+    }
+  >
+    Post entry →
+  </Text>
+</View>
+`;
+
+exports[`design-parity snapshots (S17) Button variants: button-primary 1`] = `
+<View
+  accessibilityRole="button"
+  accessibilityState={
+    {
+      "busy": undefined,
+      "checked": undefined,
+      "disabled": false,
+      "expanded": undefined,
+      "selected": undefined,
+    }
+  }
+  accessibilityValue={
+    {
+      "max": undefined,
+      "min": undefined,
+      "now": undefined,
+      "text": undefined,
+    }
+  }
+  accessible={true}
+  collapsable={false}
+  focusable={true}
+  onBlur={[Function]}
+  onClick={[Function]}
+  onFocus={[Function]}
+  onResponderGrant={[Function]}
+  onResponderMove={[Function]}
+  onResponderRelease={[Function]}
+  onResponderTerminate={[Function]}
+  onResponderTerminationRequest={[Function]}
+  onStartShouldSetResponder={[Function]}
+  style={
+    [
+      {
+        "alignItems": "center",
+        "alignSelf": "flex-start",
+        "borderRadius": 4,
+        "borderWidth": 1,
+        "flexDirection": "row",
+        "paddingHorizontal": 16,
+        "paddingVertical": 9,
+      },
+      {
+        "backgroundColor": "#11201a",
+        "borderColor": "#11201a",
+      },
+      false,
+      undefined,
+    ]
+  }
+>
+  <Text
+    style={
+      [
+        {
+          "fontFamily": "JetBrains Mono",
+          "fontSize": 12.5,
+          "fontWeight": "500",
+          "letterSpacing": 0.25,
+        },
+        {
+          "color": "#efece1",
+        },
+      ]
+    }
+  >
+    Post entry →
+  </Text>
+</View>
+`;

@@ -7,7 +7,8 @@
     "start": "expo start",
     "web": "expo start --web",
     "test": "jest",
-    "lint": "expo lint"
+    "lint": "eslint .",
+    "lint:expo": "expo lint"
   },
   "dependencies": {
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
