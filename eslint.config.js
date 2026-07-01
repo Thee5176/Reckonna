@@ -5,6 +5,7 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    // .claude/ holds sibling git worktrees + skill config — never lint other branches' code.
+    ignores: ["dist/*", ".claude/**", "graphify-out/**"],
   }
 ]);
