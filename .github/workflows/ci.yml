@@ -119,6 +119,21 @@ jobs:
           secrets: |
             secret/data/homelab/sonar/ci-token token | SONAR_TOKEN
       - uses: SonarSource/sonarqube-scan-action@v4
+        # PR evaluation: sonar-project.properties sets sonar.qualitygate.wait=true,
+        # so this step FAILS the job (and the PR) when the gate is red — on push and
+        # pull_request alike. On plain Community Build a PR scan is gated against the
+        # project's New Code. Isolated per-PR analysis + decoration needs the community
+        # branch plugin on the server; once installed, set repo var SONAR_BRANCH_PLUGIN=true
+        # and the sonar.pullrequest.* args below activate. head_ref/base_ref are safe here:
+        # they go to the scanner CLI as -D args (never a shell), the job `if:` restricts to
+        # same-repo PRs, and git refnames forbid whitespace — so a branch name is always a
+        # single token and cannot smuggle an extra -D (no command/arg injection).
+        with:
+          args: >-
+            ${{ (github.event_name == 'pull_request' && vars.SONAR_BRANCH_PLUGIN == 'true')
+                && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}',
+                          github.event.pull_request.number, github.head_ref, github.base_ref)
+                || '' }}
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
