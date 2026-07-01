@@ -71,6 +71,42 @@ jobs:
       - run: terraform -chdir=infra init -backend=false
       - run: terraform -chdir=infra fmt -check -recursive
       - run: terraform -chdir=infra validate
+      # plan-02 cloudflare root — a separate module; -chdir=infra above never validates it.
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform validate
+
+  infra-manifests:
+    # Closes the CI coverage gap: kubeconform the kustomize render of every k8s base (IT1) and
+    # run the infra IT shell tests (IT4-IT9) + shellcheck. "CI green" now means "IT green".
+    name: k8s manifests + infra tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - name: Install kubeconform + shellcheck
+        run: |
+          go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      - name: kubeconform kustomize render — every base (IT1)
+        run: |
+          set -o pipefail
+          for base in infra/k8s/postgres infra/k8s/tailscale infra/k8s/reckonna-app infra/k8s/cloudflared; do
+            echo "== $base =="
+            kubectl kustomize "$base" | kubeconform -strict -ignore-missing-schemas -summary
+          done
+      - name: Infra IT shell tests (IT4-IT9 + scripts)
+        run: |
+          for t in tests/nginx-content_test.sh tests/probes_test.sh \
+                   tests/cloudflared-vault_test.sh tests/cloudflared-args_test.sh \
+                   tests/tunnel-config_test.sh tests/tf-dns_test.sh tests/scripts_test.sh \
+                   tests/service-annotations_test.sh tests/vault-injector_test.sh; do
+            echo "== $t =="; bash "$t"
+          done
+      - name: shellcheck
+        run: shellcheck -S warning scripts/tunnel-*.sh tests/nginx-content_test.sh tests/probes_test.sh tests/cloudflared-vault_test.sh tests/cloudflared-args_test.sh tests/tunnel-config_test.sh tests/tf-dns_test.sh tests/scripts_test.sh
 
   gitleaks:
     name: gitleaks (secret scan)
