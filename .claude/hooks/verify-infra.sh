@@ -16,7 +16,10 @@ case "$FILE" in
     fi ;;
   *kubernetes/*.yaml|*kubernetes/*.yml|*k8s/*.yaml|*k8s/*.yml|*/manifests/*.yaml|*/manifests/*.yml)
     command -v kubeconform >/dev/null 2>&1 || exit 0
-    kubeconform -strict "$FILE" 2>&1 || { echo "kubeconform failed" >&2; exit 2; } ;;
+    # -ignore-missing-schemas: skip kinds with no schema (Kustomization, CRDs) instead of
+    # blocking — matches this hook's "skip rather than block" intent. Real manifests still
+    # get -strict validation; the render-level gate lives in `make k8s-validate` + CI.
+    kubeconform -strict -ignore-missing-schemas "$FILE" 2>&1 || { echo "kubeconform failed" >&2; exit 2; } ;;
   *) exit 0 ;;
 esac
 exit 0
