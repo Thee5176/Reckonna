@@ -31,10 +31,17 @@ func SetupTelemetry(ctx context.Context, cfg Config) (func(context.Context) erro
 		return nil, fmt.Errorf("otel resource: %w", err)
 	}
 
+	// Exporters read OTEL_EXPORTER_OTLP_ENDPOINT + OTEL_EXPORTER_OTLP_PROTOCOL
+	// from the environment themselves, which (per the OTLP spec) appends the
+	// signal-specific path — /v1/traces, /v1/metrics — to the base collector
+	// URL. We only decide HERE whether to wire a real exporter at all (so dev /
+	// tests without a collector install no-export providers and never dial out).
+	exportOTLP := cfg.OTLPEndpoint != ""
+
 	// ── Traces ──
 	traceOpts := []sdktrace.TracerProviderOption{sdktrace.WithResource(res)}
-	if cfg.OTLPEndpoint != "" {
-		exp, err := otlptracehttp.New(ctx, otlptracehttp.WithEndpointURL(cfg.OTLPEndpoint))
+	if exportOTLP {
+		exp, err := otlptracehttp.New(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("otlp trace exporter: %w", err)
 		}
@@ -45,8 +52,8 @@ func SetupTelemetry(ctx context.Context, cfg Config) (func(context.Context) erro
 
 	// ── Metrics (RED dashboard) ──
 	meterOpts := []metric.Option{metric.WithResource(res)}
-	if cfg.OTLPEndpoint != "" {
-		mexp, err := otlpmetrichttp.New(ctx, otlpmetrichttp.WithEndpointURL(cfg.OTLPEndpoint))
+	if exportOTLP {
+		mexp, err := otlpmetrichttp.New(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("otlp metric exporter: %w", err)
 		}
