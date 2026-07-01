@@ -1,0 +1,17 @@
+{
+  "_meta": { "locale": "en", "keyed_by": "error.code", "source": "plan 03 error-code registry" },
+  "errors": {
+    "unbalanced_entry":            { "title": "Unbalanced journal entry",            "detail": "The sum of debits does not equal the sum of credits." },
+    "mixed_currency":              { "title": "Mixed currencies in one entry",        "detail": "A journal entry must use a single currency in v1." },
+    "missing_required_dimension":  { "title": "Missing required dimension",           "detail": "A line omits a dimension its account requires." },
+    "unknown_account_code":        { "title": "Unknown account code",                 "detail": "A line references an account code that does not exist." },
+    "invalid_cursor":              { "title": "Invalid cursor",                       "detail": "The pagination cursor is malformed or expired." },
+    "concurrency_conflict":        { "title": "Concurrency conflict",                 "detail": "The entry was modified by someone else; reload and retry." },
+    "duplicate_idempotency_key":   { "title": "Duplicate idempotency key",            "detail": "This Idempotency-Key was already used with a different request body." },
+    "unsupported_media_type":      { "title": "Unsupported media type",               "detail": "Content-Type must be application/json." },
+    "unauthorized":                { "title": "Unauthorized",                         "detail": "A valid bearer token is required." },
+    "forbidden":                   { "title": "Forbidden",                            "detail": "You may not act on this resource." },
+    "not_found":                   { "title": "Not found",                            "detail": "The requested resource does not exist." },
+    "validation_failed":           { "title": "Validation failed",                    "detail": "The request is syntactically or semantically invalid." }
+  }
+}
