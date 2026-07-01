@@ -1,16 +1,65 @@
 # Dev Orchestration Plan — Plans 01 / 02 / 03 (DRAFT)
 
-status: draft (rough idea — not approved, not executing)
+status: active (plans 01 + 02 approved; executing plan 02 step-by-step)
 author: thee5176 (via Claude lead)
 created: 2026-06-24
-scope: how the three approved/pending plans get built in parallel — phasing, agent
-       roster, per-subagent token budget, and progress tracking.
+updated: 2026-07-01
+scope: how the plans get built — phasing, agent roster, per-subagent token budget,
+       progress tracking, and the branch + step cadence we actually develop with.
 
 > This is an **orchestration** doc, not a feature plan. The feature plans
 > (`plans/01-*`, `plans/02-*`, `plans/03-*`) remain the source of truth for *what* to
 > build. This doc describes *who* builds it, *in what order*, *at what cost*, and *how we
 > track it*. Nothing here overrides `devops.md` gates: status flips and `terraform/kubectl
 > apply` stay human-only.
+
+---
+
+## Execution workflow (branch + step cadence) — how we actually build
+
+**One branch per plan — not per step.** Name it `feat/plan<NN>-<slug>` (e.g.
+`feat/plan02-cloudflare-tunnel`). Every step commit for that plan (S0, S1, S2 …) lands on
+that single branch, in order.
+> Correction (2026-07-01): early plan-02 work used per-step branch names
+> (`feat/plan02-s1-reckonna-app`, then `feat/plan02-s2-cloudflared`). Going forward use ONE
+> branch per plan. `feat/plan02-s2-cloudflared` was cut from the S1 branch HEAD so it already
+> carries S1 + S2 — it is the de-facto plan-02 branch; continue S3–S6 on it (or rename it).
+
+**One step at a time = the pace.** One step (S`<n>`) = one commit carrying a `Plan: S<n>`
+trailer (devops.md). Build it, prove it green, commit, then move to the next. Never batch
+steps into one commit; never skip ahead. Human says "continue" between steps.
+
+**Per-step loop (what "build a step" means):**
+1. Write the step's manifests/code **plus** its AT/IT tests (grep / kubeconform / unit).
+2. Validate locally — `kubectl kustomize <base> | kubeconform -strict -ignore-missing-schemas`;
+   run the step's `tests/*.sh`; `shellcheck` any scripts.
+3. Commit: `<type>(scope): <plan's verbatim step subject>` + `Plan: S<n>` +
+   `Co-Authored-By: Claude Opus 4.8`.
+4. Report + wait for the human before the next step.
+
+**Landing a finished plan.** When all steps are green on the plan branch: push → CI green →
+merge the plan branch into the infra integration branch (`feat/02-infra-postgres-tailnet`) →
+later into `develop`. Merge method = **rebase** (repo allows only rebase; it preserves the
+per-step commits and honors devops.md "no squashing across steps").
+
+**Gates that always apply:** approved plan `status` (require-prereq), CI green before merge,
+`kubectl apply` / `terraform apply` are human-only, secrets via Vault only. Local
+`kubeconform`/tests are the dev-time gate; CI + `make k8s-validate` are the merge gate.
+
+## Progress log
+
+| Plan | Step | Commit | Status |
+|------|------|--------|--------|
+| 01 | postgres + tailnet (all) | PR#3 rebase-merged → `feat/02-infra-postgres-tailnet`; reapplied live (n8n ingress preserved) | ✅ landed + verified live (SELECT 1) |
+| 02 | S0 plan doc | — | ✅ (plan approved 2026-06-29) |
+| 02 | S1 reckonna-app harness | `28a7cec` | ✅ render 5/5, IT6/IT7 green |
+| 02 | S2 cloudflared | `9ff5de1` | ✅ render 4/4, IT5/IT8 green |
+| 02 | S3 terraform cloudflare | — | ▶ next |
+| 02 | S4 scripts · S5 Makefile · S6 docs · S-verify | — | pending |
+| 03 | Tier-0 reconcile + S1–S17b | — | pending (approved; testcontainers-isolated) |
+
+Current working branch: `feat/plan02-s2-cloudflared` (holds S1 + S2 = de-facto plan-02 branch).
+Also fixed en route: `verify-infra.sh` hook (`c600cba`) + kustomize `commonLabels`→`labels`.
 
 ---
 
