@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reckonna-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reckonna-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reckonna-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+          # IT7: readiness AND liveness both hit /healthz:80 (HTTP). Readiness gates the
+          # Service endpoints so cloudflared never routes to a not-yet-ready pod (cold-start
+          # 502 fix / P1 ingress-ordering).
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: content
+          configMap:
+            name: reckonna-app-content
+        - name: nginx-conf
+          configMap:
+            name: reckonna-app-nginx

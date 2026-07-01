@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reckonna-app-content
+data:
+  # IT6: healthz content is exactly {"status":"ok"} (AT1); reckonna_hello contains "hello" (AT2).
+  healthz: '{"status":"ok"}'
+  reckonna_hello: 'hello from reckonna'

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reckonna-app-nginx
+data:
+  # Routes the two static files. /healthz -> file `healthz` (AT1), /reckonna/hello -> file
+  # `reckonna_hello` (AT2). Everything else 404 (harness has no other surface).
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      location = /healthz {
+        default_type application/json;
+        alias /usr/share/nginx/html/healthz;
+      }
+      location = /reckonna/hello {
+        default_type text/plain;
+        alias /usr/share/nginx/html/reckonna_hello;
+      }
+      location / { return 404; }
+    }

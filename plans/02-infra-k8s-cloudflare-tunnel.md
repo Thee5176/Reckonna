@@ -1,8 +1,8 @@
 ---
 feature: 02-infra-k8s-cloudflare-tunnel
-status: draft   # require-prereq.sh greps this — change to "approved" only via /plan-eng-review + human sign-off
-approved_by: TBD
-approved_at: TBD
+status: approved   # require-prereq.sh greps this — approved via /plan-eng-review + human sign-off
+approved_by: thee5176
+approved_at: 2026-06-29
 domain: infra
 depends_on:
   - 00-bootstrap-deps-vault
@@ -143,7 +143,10 @@ Each step compiles/validates standalone. Manifest-only steps verify with static 
   is sourced from `/vault/secrets/cloudflared.env` via an `envFrom` script wrapper or
   a `command` that `source`s the file then `exec`s cloudflared. NO `--config` flag —
   cloudflared fetches the ingress rules from the Cloudflare API on startup. Vault Agent
-  annotations match plan 01 pattern: role `reckonna-cloudflared`, template renders
+  annotations re-use plan 01's Vault Agent Injector PATTERN but a NEW, dedicated role
+  `reckonna-cloudflared` + policy (read-only on `secret/data/app/cloudflare/tunnel`) —
+  this is NOT plan 01's `reckonna-postgres` role; the new role + policy must be
+  provisioned in Vault first (human-only, documented in S6). Template renders
   `TUNNEL_TOKEN` from `secret/data/app/cloudflare/tunnel:token`.
 - **S3 — Terraform Cloudflare.** Uses provider v4+ resource names
   `cloudflare_zero_trust_tunnel_cloudflared` + `cloudflare_zero_trust_tunnel_cloudflared_config`.
@@ -165,7 +168,7 @@ Each step compiles/validates standalone. Manifest-only steps verify with static 
 | Codepath | Realistic failure | Test? | Error handling? | User visibility |
 |----------|-------------------|-------|-----------------|-----------------|
 | cloudflared startup config fetch from CF API | Cloudflare API throttled or rate-limited; pod CrashLoop | No (live-only) | cloudflared default exponential backoff retries on its own | Visible in `kubectl logs -n cloudflared`; AT1 returns 502 until pod recovers |
-| Tunnel token compromised | Bad actor replays token | N/A (preventive) | Rotate via `vault kv put -mount=secret app/cloudflare/tunnel token=...`; restart cloudflared; revoke old tunnel in CF dashboard | None until rotated |
+| Tunnel token compromised | Bad actor replays token | N/A (preventive) | Rotate with `vault kv patch -mount=secret app/cloudflare/tunnel token=...` (PATCH, not PUT — the secret also holds `api_token`; `put` would wipe it). cloudflared does NOT hot-reload: the Vault Agent re-renders the file but the pod must be restarted (`kubectl rollout restart deploy/cloudflared -n cloudflared`) to read the new token — documented v1 behavior, no auto-reload. Then revoke the old tunnel in the CF dashboard. | None until rotated + restarted |
 | Subdomain CNAME collision | `reckonna` already exists in Cloudflare zone | N/A | `terraform apply` errors at plan stage with explicit conflict | Visible in tf output before apply |
 | nginx ConfigMap malformed | Bad index/healthz content | IT6 grep catches structure; readinessProbe catches runtime | Pod NotReady; Service has no endpoints; tunnel returns 502 | Visible immediately in `kubectl get pods -n reckonna-app` |
 | cloudflared Deployment rollout | Brief outage during RollingUpdate | AT4 enforces ≤60s recovery | Default RollingUpdate strategy; 2 replicas | AT1 may fail intermittently for ≤60s |
@@ -230,8 +233,13 @@ captured in the rollout doc.
 - Cloudflare Access (zero-trust policies on the tunnel) — public-by-default in v1;
   follow-up if/when auth is needed at the edge (vs. in-app via Keycloak — plan 03's
   choice).
-- OTel scrape of nginx access logs — `/healthz` only in v1; OTel pipeline is a
-  separate infra plan.
+- **OTel / observability — APPROVED EXCEPTION to devops.md** ("new endpoints/screens emit
+  OpenTelemetry spans; observability is part of done"). Deliberately waived for plan 02: the
+  `reckonna-app` harness is throwaway nginx with NO business logic to trace; cloudflared/tunnel
+  health is observed via `kubectl logs -n cloudflared` + the Cloudflare dashboard. Real OTel
+  spans arrive with plan 03's Go services on this same ingress. This is a scoped, approved
+  deviation — recorded here explicitly, not an oversight. (OTel scrape of nginx access logs is
+  itself a later infra plan.)
 
 ## What already exists
 

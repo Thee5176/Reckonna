@@ -15,6 +15,10 @@ terraform {
       source  = "integrations/github"
       version = "~> 6.4"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~> 0.17"
+    }
   }
 }
 
@@ -22,8 +26,21 @@ provider "vault" {
   # address + auth read from VAULT_ADDR / VAULT_TOKEN / AppRole env — see secrets-vault.md
 }
 
+variable "kubeconfig_path" {
+  description = "Path to kubeconfig. Empty → in-cluster / provider env-var lookup (KUBE_CONFIG_PATH, KUBECONFIG)."
+  type        = string
+  default     = ""
+}
+
 provider "kubernetes" {
-  # kubeconfig from env / in-cluster — vendor-neutral, no cloud-specific auth here
+  # Local dev (default): var.kubeconfig_path unset → fall back to
+  # pathexpand("~/.kube/config") so workstation runs Just Work and the
+  # provider doesn't drop to http://localhost:80.
+  # CI / in-cluster: set var.kubeconfig_path = "" AND unset $HOME (or run
+  # without a home dir) so config_path becomes null and the provider reads
+  # its standard env-var chain (KUBE_CONFIG_PATH / KUBECONFIG) or the
+  # in-cluster service-account token. Keeps this vendor-neutral.
+  config_path = var.kubeconfig_path != "" ? var.kubeconfig_path : try(pathexpand("~/.kube/config"), null)
 }
 
 # GitHub provider — owner fixed; token supplied via the GITHUB_TOKEN env var,
