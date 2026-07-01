@@ -38,6 +38,6 @@ resource "cloudflare_record" "reckonna" {
   zone_id = data.cloudflare_zone.reckonna.id
   name    = "reckonna"
   type    = "CNAME"
-  value   = "${cloudflare_zero_trust_tunnel_cloudflared.reckonna.id}.cfargotunnel.com"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.reckonna.id}.cfargotunnel.com"
   proxied = true
 }

@@ -13,6 +13,8 @@ on:
 env:
   GO_VERSION: "1.23"
   NODE_VERSION: "20"
+  VAULT_INTERNAL_URL: ${{ vars.VAULT_INTERNAL_URL }}
+  SONAR_INTERNAL_URL: ${{ vars.SONAR_INTERNAL_URL }}
 
 jobs:
   backend:
@@ -146,7 +148,7 @@ jobs:
       - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token), internal cluster DNS
         uses: hashicorp/vault-action@v3
         with:
-          url: ${{ vars.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
+          url: ${{ env.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
           method: approle
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
@@ -155,7 +157,7 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@v4
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
+          SONAR_HOST_URL: ${{ env.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
 
   # Always-run gate so `Sonar gate` can be a REQUIRED status check without
   # hanging PRs. The `sonar` job above is skippable (SONAR_ENABLED gate + the
