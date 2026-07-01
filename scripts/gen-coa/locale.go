@@ -48,7 +48,7 @@ func syncLocale(path string, codes []int, names map[int]string) (int, error) {
 		return 0, fmt.Errorf("marshal locale %s: %w", path, err)
 	}
 	out = append(out, '\n')
-	if err := os.WriteFile(path, out, 0o644); err != nil {
+	if err := os.WriteFile(path, out, 0o600); err != nil {
 		return 0, fmt.Errorf("write locale %s: %w", path, err)
 	}
 	return added, nil

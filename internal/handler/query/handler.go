@@ -108,7 +108,9 @@ func (h *Handler) Balances(c *gin.Context) {
 	codes := make([]int, len(raw))
 	for i, s := range raw {
 		n, err := strconv.Atoi(s)
-		if err != nil {
+		// A valid account is a 5-digit CoA code; reject anything outside the
+		// range (also keeps the later int32 narrowing safe).
+		if err != nil || n < 10000 || n > 99999 {
 			h.pw.Write(c, http.StatusBadRequest, "validation_failed", nil, nil)
 			return
 		}

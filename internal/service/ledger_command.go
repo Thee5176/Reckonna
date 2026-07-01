@@ -69,6 +69,12 @@ func (s *LedgerCommandService) buildEntry(ctx context.Context, id uuid.UUID, in 
 	lines := make([]domain.JournalLine, 0, len(in.Lines))
 
 	for _, li := range in.Lines {
+		// A valid code is a 5-digit CoA code (§4 range, DB CHECK 10000..99999).
+		// Guard the range before narrowing to int32 so an out-of-range value can
+		// never wrap into a different valid code — it is simply unknown.
+		if li.AccountCode < 10000 || li.AccountCode > 99999 {
+			return nil, nil, fmt.Errorf("%w: %d", ErrUnknownAccountCode, li.AccountCode)
+		}
 		meta, ok := accMeta[li.AccountCode]
 		if !ok {
 			row, err := s.q.GetAccountByCode(ctx, int32(li.AccountCode))

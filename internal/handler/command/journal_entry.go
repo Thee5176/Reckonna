@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -114,6 +115,8 @@ func (h *Handler) Delete(c *gin.Context) {
 func etag(version int32) string { return fmt.Sprintf("%q", strconv.Itoa(int(version))) }
 
 // parseETag parses an If-Match / ETag value (quoted or bare) into a version.
+// The version column is a positive int32; reject anything outside that range so
+// the narrowing conversion cannot overflow.
 func parseETag(v string) (int32, error) {
 	v = strings.TrimSpace(v)
 	v = strings.Trim(v, `"`)
@@ -121,5 +124,8 @@ func parseETag(v string) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int32(n), nil
+	if n < 1 || n > math.MaxInt32 {
+		return 0, fmt.Errorf("version out of range: %d", n)
+	}
+	return int32(n), nil //#nosec G109,G115 -- n is bounds-checked to [1, MaxInt32] above
 }

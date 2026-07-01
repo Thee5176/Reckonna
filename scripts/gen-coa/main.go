@@ -225,10 +225,10 @@ func main() {
 	}
 
 	up, down := coa.SeedSQL()
-	if err := os.WriteFile(filepath.Join(root, "db", "migration", "003_seed_account.up.sql"), []byte(up), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "db", "migration", "003_seed_account.up.sql"), []byte(up), 0o600); err != nil {
 		fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "db", "migration", "003_seed_account.down.sql"), []byte(down), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "db", "migration", "003_seed_account.down.sql"), []byte(down), 0o600); err != nil {
 		fatal(err)
 	}
 

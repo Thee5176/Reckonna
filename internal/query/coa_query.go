@@ -56,9 +56,15 @@ func (s *Service) Balances(ctx context.Context, owner string, codes []int) ([]Ba
 	if len(codes) > MaxAccounts {
 		return nil, ErrTooManyItems
 	}
-	arg := make([]int32, len(codes))
-	for i, c := range codes {
-		arg[i] = int32(c)
+	arg := make([]int32, 0, len(codes))
+	for _, c := range codes {
+		// Only 5-digit CoA codes can exist; bound the value before narrowing to
+		// int32 so an out-of-range input can never wrap (defense in depth — the
+		// handler already validates the range).
+		if c < 10000 || c > 99999 {
+			continue
+		}
+		arg = append(arg, int32(c))
 	}
 	rows, err := s.q.GetOutstandingBalances(ctx, qdb.GetOutstandingBalancesParams{OwnerSub: owner, Codes: arg})
 	if err != nil {

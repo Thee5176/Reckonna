@@ -69,7 +69,7 @@ func (h *Handler) Idempotency() gin.HandlerFunc {
 				Key:            key,
 				OwnerSub:       owner,
 				RequestHash:    hash,
-				ResponseStatus: int32(cap.Status()),
+				ResponseStatus: int32(cap.Status()), //#nosec G115 -- an HTTP status is always a 3-digit code
 				ResponseBody:   cap.buf.Bytes(),
 			})
 		}
