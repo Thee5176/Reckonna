@@ -9,6 +9,7 @@ import (
 
 	"github.com/thee5176/reckonna/internal/domain"
 	"github.com/thee5176/reckonna/internal/handler/problem"
+	"github.com/thee5176/reckonna/internal/metrics"
 	"github.com/thee5176/reckonna/internal/repository/command"
 	"github.com/thee5176/reckonna/internal/service"
 )
@@ -23,6 +24,7 @@ func writeError(pw *problem.Writer, c *gin.Context, err error) {
 		pw.Write(c, http.StatusBadRequest, "validation_failed", nil, nil)
 
 	case errors.Is(err, domain.ErrUnbalanced) || isPgCode(err, "23514"):
+		metrics.RecordLedgerRejected(c.Request.Context(), "unbalanced_entry")
 		zero := 0
 		pw.Write(c, http.StatusUnprocessableEntity, "unbalanced_entry",
 			[]problem.FieldError{{LineIndex: &zero, Field: "amount", Issue: "debit_credit_mismatch"}}, nil)

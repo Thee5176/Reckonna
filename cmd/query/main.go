@@ -16,6 +16,7 @@ import (
 	"github.com/thee5176/reckonna/internal/handler/middleware"
 	"github.com/thee5176/reckonna/internal/handler/problem"
 	qhttp "github.com/thee5176/reckonna/internal/handler/query"
+	"github.com/thee5176/reckonna/internal/metrics"
 	query "github.com/thee5176/reckonna/internal/query"
 )
 
@@ -23,9 +24,10 @@ func main() {
 	ctx := context.Background()
 	cfg := config.Load("query")
 
-	shutdown, err := config.SetupTracing(ctx, cfg)
-	must(err, "setup tracing")
+	shutdown, err := config.SetupTelemetry(ctx, cfg)
+	must(err, "setup telemetry")
 	defer func() { _ = shutdown(context.Background()) }()
+	must(metrics.Init(), "init metrics")
 
 	pool, err := config.NewPool(ctx, cfg.DatabaseURL)
 	must(err, "connect db")
@@ -41,7 +43,7 @@ func main() {
 	h := qhttp.NewHandler(query.NewService(pool), pw)
 
 	r := gin.New()
-	r.Use(gin.Recovery(), otelgin.Middleware("reckonna-query"))
+	r.Use(gin.Recovery(), otelgin.Middleware("reckonna-query"), middleware.Metrics())
 	r.GET("/query/health", health)
 
 	api := r.Group("")

@@ -16,6 +16,7 @@ import (
 	cmdhttp "github.com/thee5176/reckonna/internal/handler/command"
 	"github.com/thee5176/reckonna/internal/handler/middleware"
 	"github.com/thee5176/reckonna/internal/handler/problem"
+	"github.com/thee5176/reckonna/internal/metrics"
 	"github.com/thee5176/reckonna/internal/service"
 )
 
@@ -23,9 +24,10 @@ func main() {
 	ctx := context.Background()
 	cfg := config.Load("command")
 
-	shutdown, err := config.SetupTracing(ctx, cfg)
-	must(err, "setup tracing")
+	shutdown, err := config.SetupTelemetry(ctx, cfg)
+	must(err, "setup telemetry")
 	defer func() { _ = shutdown(context.Background()) }()
+	must(metrics.Init(), "init metrics")
 
 	pool, err := config.NewPool(ctx, cfg.DatabaseURL)
 	must(err, "connect db")
@@ -41,7 +43,7 @@ func main() {
 	h := cmdhttp.NewHandler(service.NewLedgerCommandService(pool), pw, pool)
 
 	r := gin.New()
-	r.Use(gin.Recovery(), otelgin.Middleware("reckonna-command"))
+	r.Use(gin.Recovery(), otelgin.Middleware("reckonna-command"), middleware.Metrics())
 	r.GET("/command/health", health)
 
 	api := r.Group("")
