@@ -19,6 +19,11 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: tailscale
+        # n8n shares this Postgres (pre-existing live coupling). Codified here so a
+        # reapply does not cut n8n's DB access. Revisit if n8n is decoupled from this DB.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: n8n
       ports:
         - protocol: TCP
           port: 5432
