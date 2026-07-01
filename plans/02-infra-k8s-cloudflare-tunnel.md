@@ -1,8 +1,8 @@
 ---
 feature: 02-infra-k8s-cloudflare-tunnel
-status: draft   # require-prereq.sh greps this — change to "approved" only via /plan-eng-review + human sign-off
-approved_by: TBD
-approved_at: TBD
+status: approved   # require-prereq.sh greps this — approved via /plan-eng-review + human sign-off
+approved_by: thee5176
+approved_at: 2026-06-29
 domain: infra
 depends_on:
   - 00-bootstrap-deps-vault

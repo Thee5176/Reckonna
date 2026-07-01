@@ -1,6 +1,8 @@
 ---
 feature: 03-backend-cqrs-core
-status: draft
+status: approved   # require-prereq.sh greps this — approved via /plan-eng-review + plan-eval + human sign-off
+approved_by: thee5176
+approved_at: 2026-06-29
 domain: backend
 depends_on:
   - 00-bootstrap-deps-vault
