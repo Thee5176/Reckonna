@@ -482,6 +482,23 @@ imports — fails CI if command pkg ever appears.
   backend work is not gated on infra completion. Provision before e2e (S17) against a live stack.
 - **plan-tracker:** logs each landed step to `01-backend-cqrs-core.impl.md`.
 
+### Infra dependency protocol (backend ↔ infra hand-off)
+When a backend step is **blocked on an infra deliverable** (self-hosted Keycloak/OIDC issuer + JWKS,
+live Postgres/tailnet endpoint, k8s deploy target, ghcr.io publish credentials, Vault-rendered runtime
+config), the backend HEAD MUST NOT stall or stub the dependency away silently. Instead:
+1. **Keep going** on every step that a mock/testcontainer can satisfy (e.g. S10 against mock JWKS,
+   S17 against testcontainers-go Postgres) so backend progress is never gated on infra completion.
+2. **Write a requirements document** for the infra team at `doc/infra-requirements/<dependency>.md`
+   specifying exactly what infra must provide so backend can integrate: the interface/contract
+   (URLs, ports, JWKS/issuer/audience, env-var names + Vault paths — never secret values), the
+   acceptance check backend will run against it, and the step(s) it unblocks. This doc is the
+   deliverable handed to the infra HEAD; it is how a block is escalated, not a Slack message.
+3. **Mark the step `blocked-on-infra`** in the status report with a pointer to that requirements doc,
+   and continue with downstream work that does not depend on it.
+Known v1 infra dependencies to document if they block: `infra/keycloak-oidc` (S10 runtime, S17 live
+e2e), ghcr.io image publish (S17b), Vault-rendered runtime env (deploy). Each gets its own file under
+`doc/infra-requirements/`.
+
 "Done" (plan 01) = AT1–AT11, AT13–AT18 + IT1–IT5, IT7, IT8, IT9, IT12–IT17 green;
 `make test` race-clean; `make lint` clean; cmd/query build proven read-only at compile time (IT9);
 CoA seed generated from config/coa.yaml + validated vs the governance standard; all locales cover
