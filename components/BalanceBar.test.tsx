@@ -29,10 +29,11 @@ describe('BalanceBar (IT3 — 借方=貸方 derived, not passed §05)', () => {
   });
 
   it('AT2: unbalanced → Difference 500.00 (debit-colored) and the CTA is DISABLED', () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId } = render(
       <BalanceBar testID="bar" debits={['1000']} credits={['500']} ctaLabel="Review balance →" />,
     );
-    const diff = getByText('500.00');
+    const diff = getByTestId('bar-diff');
+    expect(diff.props.children).toBe('500.00');
     const style = flatten(diff.props.style);
     expect(style.color).toBe(color.debit);
     expect(getByTestId('bar-cta').props.accessibilityState.disabled).toBe(true);
