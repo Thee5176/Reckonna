@@ -21,6 +21,8 @@ type Querier interface {
 	// (that lives in the query package). Reference lookups here resolve business
 	// keys (account code, book/dimension codes) to ids during a write tx.
 	GetBookByCode(ctx context.Context, code string) (Book, error)
+	// Resolves a (type_code, value_code) pair to its ids. Returns pgx.ErrNoRows for
+	// an unknown dimension value so the service can reject the posting (422).
 	GetDimensionValue(ctx context.Context, arg GetDimensionValueParams) (GetDimensionValueRow, error)
 	// Command-side idempotency records (plan 03 S8b). Scoped by (key, owner_sub).
 	GetIdempotencyRecord(ctx context.Context, arg GetIdempotencyRecordParams) (IdempotencyRecord, error)

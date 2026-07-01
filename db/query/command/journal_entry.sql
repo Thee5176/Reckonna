@@ -10,10 +10,12 @@ SELECT id, code, name, type, normal_balance, postable, required_dimensions
 FROM account WHERE code = $1;
 
 -- name: GetDimensionValue :one
-SELECT dv.id, dv.code, dt.code AS type_code
+-- Resolves a (type_code, value_code) pair to its ids. Returns pgx.ErrNoRows for
+-- an unknown dimension value so the service can reject the posting (422).
+SELECT dv.id AS value_id, dv.dimension_type_id AS type_id, dt.code AS type_code
 FROM dimension_value dv
 JOIN dimension_type dt ON dt.id = dv.dimension_type_id
-WHERE dt.code = $1 AND dv.code = $2;
+WHERE dt.code = @type_code AND dv.code = @value_code;
 
 -- name: InsertJournalEntry :one
 INSERT INTO journal_entry (id, entry_date, description, owner_sub, book_id)
@@ -26,10 +28,7 @@ VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: InsertJournalLineDimension :exec
 INSERT INTO journal_line_dimension (journal_line_id, dimension_type_id, dimension_value_id)
-SELECT $1, dt.id, dv.id
-FROM dimension_type dt
-JOIN dimension_value dv ON dv.dimension_type_id = dt.id
-WHERE dt.code = $2 AND dv.code = $3;
+VALUES ($1, $2, $3);
 
 -- name: GetJournalEntryForUpdate :one
 SELECT id, owner_sub, version FROM journal_entry WHERE id = $1;

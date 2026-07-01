@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 const deleteJournalEntry = `-- name: DeleteJournalEntry :exec
@@ -83,27 +83,29 @@ func (q *Queries) GetBookByCode(ctx context.Context, code string) (Book, error) 
 }
 
 const getDimensionValue = `-- name: GetDimensionValue :one
-SELECT dv.id, dv.code, dt.code AS type_code
+SELECT dv.id AS value_id, dv.dimension_type_id AS type_id, dt.code AS type_code
 FROM dimension_value dv
 JOIN dimension_type dt ON dt.id = dv.dimension_type_id
 WHERE dt.code = $1 AND dv.code = $2
 `
 
 type GetDimensionValueParams struct {
-	Code   string `json:"code"`
-	Code_2 string `json:"code_2"`
+	TypeCode  string `json:"type_code"`
+	ValueCode string `json:"value_code"`
 }
 
 type GetDimensionValueRow struct {
-	ID       uuid.UUID `json:"id"`
-	Code     string    `json:"code"`
+	ValueID  uuid.UUID `json:"value_id"`
+	TypeID   uuid.UUID `json:"type_id"`
 	TypeCode string    `json:"type_code"`
 }
 
+// Resolves a (type_code, value_code) pair to its ids. Returns pgx.ErrNoRows for
+// an unknown dimension value so the service can reject the posting (422).
 func (q *Queries) GetDimensionValue(ctx context.Context, arg GetDimensionValueParams) (GetDimensionValueRow, error) {
-	row := q.db.QueryRow(ctx, getDimensionValue, arg.Code, arg.Code_2)
+	row := q.db.QueryRow(ctx, getDimensionValue, arg.TypeCode, arg.ValueCode)
 	var i GetDimensionValueRow
-	err := row.Scan(&i.ID, &i.Code, &i.TypeCode)
+	err := row.Scan(&i.ValueID, &i.TypeID, &i.TypeCode)
 	return i, err
 }
 
@@ -162,12 +164,12 @@ VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertJournalLineParams struct {
-	ID             uuid.UUID      `json:"id"`
-	JournalEntryID uuid.UUID      `json:"journal_entry_id"`
-	AccountID      uuid.UUID      `json:"account_id"`
-	Side           EntrySide      `json:"side"`
-	Amount         pgtype.Numeric `json:"amount"`
-	LineNo         int32          `json:"line_no"`
+	ID             uuid.UUID       `json:"id"`
+	JournalEntryID uuid.UUID       `json:"journal_entry_id"`
+	AccountID      uuid.UUID       `json:"account_id"`
+	Side           EntrySide       `json:"side"`
+	Amount         decimal.Decimal `json:"amount"`
+	LineNo         int32           `json:"line_no"`
 }
 
 func (q *Queries) InsertJournalLine(ctx context.Context, arg InsertJournalLineParams) error {
@@ -184,20 +186,17 @@ func (q *Queries) InsertJournalLine(ctx context.Context, arg InsertJournalLinePa
 
 const insertJournalLineDimension = `-- name: InsertJournalLineDimension :exec
 INSERT INTO journal_line_dimension (journal_line_id, dimension_type_id, dimension_value_id)
-SELECT $1, dt.id, dv.id
-FROM dimension_type dt
-JOIN dimension_value dv ON dv.dimension_type_id = dt.id
-WHERE dt.code = $2 AND dv.code = $3
+VALUES ($1, $2, $3)
 `
 
 type InsertJournalLineDimensionParams struct {
-	JournalLineID uuid.UUID `json:"journal_line_id"`
-	Code          string    `json:"code"`
-	Code_2        string    `json:"code_2"`
+	JournalLineID    uuid.UUID `json:"journal_line_id"`
+	DimensionTypeID  uuid.UUID `json:"dimension_type_id"`
+	DimensionValueID uuid.UUID `json:"dimension_value_id"`
 }
 
 func (q *Queries) InsertJournalLineDimension(ctx context.Context, arg InsertJournalLineDimensionParams) error {
-	_, err := q.db.Exec(ctx, insertJournalLineDimension, arg.JournalLineID, arg.Code, arg.Code_2)
+	_, err := q.db.Exec(ctx, insertJournalLineDimension, arg.JournalLineID, arg.DimensionTypeID, arg.DimensionValueID)
 	return err
 }
 

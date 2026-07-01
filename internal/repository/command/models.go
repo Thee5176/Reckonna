@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 type AccountStatus string
@@ -283,12 +283,12 @@ type JournalEntry struct {
 }
 
 type JournalLine struct {
-	ID             uuid.UUID      `json:"id"`
-	JournalEntryID uuid.UUID      `json:"journal_entry_id"`
-	AccountID      uuid.UUID      `json:"account_id"`
-	Side           EntrySide      `json:"side"`
-	Amount         pgtype.Numeric `json:"amount"`
-	LineNo         int32          `json:"line_no"`
+	ID             uuid.UUID       `json:"id"`
+	JournalEntryID uuid.UUID       `json:"journal_entry_id"`
+	AccountID      uuid.UUID       `json:"account_id"`
+	Side           EntrySide       `json:"side"`
+	Amount         decimal.Decimal `json:"amount"`
+	LineNo         int32           `json:"line_no"`
 }
 
 type JournalLineDimension struct {

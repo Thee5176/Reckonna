@@ -8,7 +8,7 @@ package query
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 const balanceSheet = `-- name: BalanceSheet :many
@@ -27,11 +27,11 @@ ORDER BY a.code
 `
 
 type BalanceSheetRow struct {
-	Type          AccountType    `json:"type"`
-	Code          int32          `json:"code"`
-	Name          string         `json:"name"`
-	NormalBalance NormalBalance  `json:"normal_balance"`
-	NetDebit      pgtype.Numeric `json:"net_debit"`
+	Type          AccountType     `json:"type"`
+	Code          int32           `json:"code"`
+	Name          string          `json:"name"`
+	NormalBalance NormalBalance   `json:"normal_balance"`
+	NetDebit      decimal.Decimal `json:"net_debit"`
 }
 
 // Query-side financial statements. SELECT ONLY. Aggregates are owner-scoped and
@@ -79,10 +79,10 @@ ORDER BY a.code
 `
 
 type ProfitLossRow struct {
-	Type      AccountType    `json:"type"`
-	Code      int32          `json:"code"`
-	Name      string         `json:"name"`
-	NetCredit pgtype.Numeric `json:"net_credit"`
+	Type      AccountType     `json:"type"`
+	Code      int32           `json:"code"`
+	Name      string          `json:"name"`
+	NetCredit decimal.Decimal `json:"net_credit"`
 }
 
 // net_credit = Σ(credit) − Σ(debit) per account. Income adds, expense subtracts;

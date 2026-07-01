@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 const getJournalEntry = `-- name: GetJournalEntry :one
@@ -70,12 +71,12 @@ type GetJournalLinesParams struct {
 }
 
 type GetJournalLinesRow struct {
-	ID             uuid.UUID      `json:"id"`
-	JournalEntryID uuid.UUID      `json:"journal_entry_id"`
-	AccountCode    int32          `json:"account_code"`
-	Side           EntrySide      `json:"side"`
-	Amount         pgtype.Numeric `json:"amount"`
-	LineNo         int32          `json:"line_no"`
+	ID             uuid.UUID       `json:"id"`
+	JournalEntryID uuid.UUID       `json:"journal_entry_id"`
+	AccountCode    int32           `json:"account_code"`
+	Side           EntrySide       `json:"side"`
+	Amount         decimal.Decimal `json:"amount"`
+	LineNo         int32           `json:"line_no"`
 }
 
 // Lines of one entry, owner-scoped via the parent entry.

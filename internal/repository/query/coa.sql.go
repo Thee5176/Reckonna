@@ -8,7 +8,7 @@ package query
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 const getOutstandingBalances = `-- name: GetOutstandingBalances :many
@@ -31,11 +31,11 @@ type GetOutstandingBalancesParams struct {
 }
 
 type GetOutstandingBalancesRow struct {
-	AccountCode   int32          `json:"account_code"`
-	AccountName   string         `json:"account_name"`
-	NormalBalance NormalBalance  `json:"normal_balance"`
-	TotalDebit    pgtype.Numeric `json:"total_debit"`
-	TotalCredit   pgtype.Numeric `json:"total_credit"`
+	AccountCode   int32           `json:"account_code"`
+	AccountName   string          `json:"account_name"`
+	NormalBalance NormalBalance   `json:"normal_balance"`
+	TotalDebit    decimal.Decimal `json:"total_debit"`
+	TotalCredit   decimal.Decimal `json:"total_credit"`
 }
 
 // Debit/credit totals per requested account, scoped to the caller's entries.
