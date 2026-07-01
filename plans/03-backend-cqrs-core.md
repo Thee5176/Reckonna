@@ -182,7 +182,9 @@ are later features. **Scaffolded** this phase: `config/coa.yaml` (20 5-digit sta
 Source of truth = `config/coa.yaml`. DB enums: `account_type` = (asset, liability, equity, income, expense);
 `normal_balance` = (debit, credit). Per §6 each account has: 5-digit `code`, `name` (English canonical),
 `type`, `normal_balance`, `postable`, `current_noncurrent` (assets/liabilities), `status`,
-`required_dimensions` (optional). Currency-neutral (§4). 5-digit gapped codes per §4 ranges.
+`required_dimensions` (optional), plus the §6-**Required** attributes `description`, `ifrs_line_item`,
+`allowed_books`, `owner` (all four MUST be present on every account; the S5a validator enforces §6
+completeness — see Step notes). Currency-neutral (§4). 5-digit gapped codes per §4 ranges.
 Statement mapping (v1, base book): BS = asset/liability/equity; P&L = income/expense.
 
 | Range | Codes (v1) | Accounts |
@@ -295,29 +297,42 @@ failing-test commit BEFORE code commit for domain/money/auth paths. Every commit
 | S2  | `feat(domain): Ledger, LedgerItem, CoA entities + invariant`   | internal/domain/ledger.go, internal/domain/coa.go, internal/domain/money.go | S1   | TestNewLedger (GREEN); ErrUnbalanced    |
 | S3  | `feat(db): schema — account, journal_entry/line, dimension(_type/value), book` | db/migration/001_accounting.up.sql, 001_accounting.down.sql | 00 | migrate up/down (IT8)        |
 | S4  | `feat(db): deferred balance TRIGGER per (entry,book) (借方=貸方)` | db/migration/002_balance_check.up.sql, 002_balance_check.down.sql | S3      | balance_trigger_test (IT3)              |
-| S5  | `feat(db): sqlc queries split per CQRS side (command writes, query reads-only)` | db/query/command/ledger.sql, db/query/query/ledger.sql, db/query/query/coa.sql, db/query/query/statement.sql; sqlc.yaml generates two packages (internal/repository/command, internal/repository/query) | S3,S4 | `sqlc generate` produces two packages; cmd/query build imports only ./query (compile-time CQRS purity — replaces IT9 grep) |
+| S5  | `feat(db): sqlc queries split per CQRS side (command writes, query reads-only)` | db/query/command/ledger.sql, db/query/query/ledger.sql, db/query/query/coa.sql, db/query/query/statement.sql; sqlc.yaml generates two packages (internal/repository/command, internal/repository/query) | S3 | `sqlc generate` produces two packages; cmd/query build imports only ./query (compile-time CQRS purity — replaces IT9 grep) |
 | S5a | `chore(tooling): gen-coa (coa.yaml → seed + locale stubs + validate)` | scripts/gen-coa.go, Makefile                                 | -            | validates config/coa.yaml vs standard   |
 | S5b | `feat(db): seed account (generated from config/coa.yaml)` | db/migration/003_seed_account.up.sql, 003_seed_account.down.sql  | S3,S5a       | 20 accounts; req-dim on 21500 (AT6/7/9) |
 | S5c | `feat(db): seed base book + dimension types/values` | db/migration/004_seed_dimensions.up.sql, 004_seed_dimensions.down.sql | S3      | base book + currency members (JPY default) |
 | S6  | `feat(repository): ledger command repo (thin sqlc wrappers)`   | internal/repository/command/ledger_repo.go                           | S2,S5        | ledger_repo_test (basic CRUD)           |
 | S6a | `feat(service): tx orchestration helper (UoW-lite)`            | internal/service/tx.go                                               | S6           | tx test: rollback on mid-step error (IT2) |
-| S7  | `feat(service): PostLedger use case (validate → atomic write)` | internal/service/ledger_command.go                                   | S6           | TestPostLedger                          |
+| S7  | `feat(service): PostLedger use case (validate → atomic write)` | internal/service/ledger_command.go                                   | S6,S6a       | TestPostLedger                          |
 | S8  | `feat(handler): POST /command/journal-entries + DTO + RFC 7807 errors` | internal/handler/journal_entry_command.go, internal/handler/dto.go, internal/handler/errors.go (Problem Details writer + error-code registry) | S7 | handler test (AT1, AT2, AT10) — assert on `code` field, not localized text |
 | S8a | `feat(middleware): Content-Type 415 + Accept-Language`         | internal/handler/middleware/content_type.go, internal/handler/middleware/i18n.go | S8 | IT15 (415 on text/plain POST), Accept-Language swap for `title`/`detail` |
 | S8b | `feat(handler): Idempotency-Key middleware for POST journal-entries` | internal/handler/middleware/idempotency.go, db/migration/005_idempotency.up.sql (table + index), db/query/command/idempotency.sql | S8 | AT15 (replay same key returns cached 201); AT15b (replay different body → 422 `duplicate_idempotency_key`) |
-| S9  | `feat(service,handler): Update/Delete journal-entry + ownership + ETag/If-Match` | internal/service/journal_entry_command.go, internal/handler/journal_entry_command.go (PUT requires If-Match, returns 409 on mismatch; GET emits ETag header from version column) | S8 | AT4, AT5, AT16 (409 on stale If-Match), AT16b (428 if If-Match missing on PUT) |
+| S9  | `feat(service,handler): Update/Delete journal-entry + ownership + ETag/If-Match` | internal/service/journal_entry_command.go, internal/handler/journal_entry_command.go (PUT requires If-Match, returns 409 on mismatch; GET emits ETag header from version column) | S8,S9a | AT4, AT5, AT16 (409 on stale If-Match), AT16b (428 if If-Match missing on PUT) |
 | S9a | `feat(db): version column on journal_entry for optimistic concurrency` | db/migration/006_journal_entry_version.up.sql (ADD COLUMN version INT NOT NULL DEFAULT 1; trigger to bump on UPDATE) | S3 | migrate up/down; concurrent-update test asserts version increments |
 | S10 | `feat(auth): Keycloak OIDC middleware (JWKS, sub claim)`       | internal/handler/middleware/auth.go, internal/config/oidc.go        | 00, kc-prereq| auth_test mock-JWKS (IT4, AT8)          |
 | S11 | `feat(query): GetLedger + ListLedgers owner-scoped reads (cursor pagination)` | internal/query/ledger_query.go, internal/handler/ledger_query.go (uses ?limit=N&cursor=<uuidv7>; server max=200) | S5,S10 | ledger_it_test (IT1, IT5, AT3) + AT3a cursor pagination |
 | S12 | `feat(query): ledger-item get + CoA list + outstanding balances`| internal/query/coa_query.go, internal/handler/coa_query.go         | S11          | coa tests (AT9)                         |
 | S13 | `feat(query): balance-sheet statement aggregate`              | internal/query/statement_query.go, internal/handler/statement.go    | S12          | TestBalanceSheet (AT6, IT7)             |
 | S14 | `feat(query): profit-loss statement aggregate`               | internal/query/statement_query.go, internal/handler/statement.go    | S13          | TestProfitLoss (AT7, IT7)               |
-| S15 | `feat(cmd): wire command + query Gin routers + config`        | cmd/command/main.go, cmd/query/main.go, internal/config/config.go   | S9,S14       | boots; health 200; readonly_test (IT9)  |
+| S15 | `feat(cmd): wire command + query Gin routers + config`        | cmd/command/main.go, cmd/query/main.go, internal/config/config.go   | S9,S14,S10   | boots; health 200; readonly_test (IT9)  |
 | S16 | `feat(obs): OTel spans on command + query handlers (otelgin)`| internal/config/otel.go, cmd/command/main.go, cmd/query/main.go (otelgin middleware at router setup auto-traces every route) | S15 | trust otelgin (well-tested upstream); manual OTLP smoke-test verifies spans on /command/ledgers + /query/ledgers (devops Done) |
 | S17 | `test(contract): e2e suite + hand-built handler-level contract tests` | internal/handler/contract_test.go, e2e/*.e2e_test.go (golden response fixtures until plan 02's openapi.yaml lands) | S15 | AT1–AT11, AT13, AT14 + IT1–IT5, IT7, IT8, IT9, IT12, IT13, IT14 green (testcontainers-go) |
 | S17b| `feat(release): multi-stage Dockerfile per service + CI build/push` | build/Dockerfile.command, build/Dockerfile.query (distroless static Go), .github/workflows/ci.yml (image job → ghcr.io tagged by commit SHA) | S15 | docker build green; image runs `--health` clean; ghcr.io publish on push to main |
 
 ### Step notes
+- **Tier-0 domain reconcile (PREREQUISITE before S6 — F2):** the domain that landed on
+  `feat/01-backend-cqrs-core` is the pre-rename `Ledger`/`LedgerItem`/`NewLedger` model (balance
+  invariant only). Before any S6 repository work, S2 must be completed to the renamed
+  `JournalEntry`/`JournalLine`/`NewEntry(lines)` model with `money.go`, `coa.go`, currency/dimension
+  values, and all three error types (`ErrUnbalanced`, `ErrMixedCurrency`, `ErrRequiredDimension`).
+  Building S6/S7/S8 on the old shape forces a redo.
+- **Migration numbering (single authority — F4):** migration files follow ONE monotonic sequence
+  owned by the backend HEAD: 001 (S3) · 002 (S4) · 003 (S5b) · 004 (S5c) · 005 (S8b) · 006 (S9a).
+  These land in different PRs, so the HEAD assigns the next free number at merge time; a colliding
+  branch rebases + renumbers. Never reuse, skip, or edit an applied migration (migrations.md).
+- **RED-first on invariant/money steps (F5):** per tdd.md, S4 (balance trigger) and S7 (PostLedger
+  use case) each commit a FAILING test BEFORE their feat commit — same Red→Green pattern as S1→S2.
+  The unit-test column names the test; the failing-test commit precedes the listed feat commit.
 - **S2 money + dimensions:** `domain.Money` wraps `shopspring/decimal.Decimal`. A `JournalLine` carries
   `amount`, `debit|credit`, an `account` ref, and dimension values (incl. `currency`). A `JournalEntry`
   is single-currency in v1: `NewEntry(lines)` returns `ErrMixedCurrency` if lines disagree on currency,
@@ -329,7 +344,8 @@ failing-test commit BEFORE code commit for domain/money/auth paths. Every commit
   single-currency so the sum is in one unit; cross-book/cross-currency consolidation is a later phase.
 - **S5a generator:** `scripts/gen-coa` reads `config/coa.yaml`, validates it against
   `doc/coa-governance-standard.md` (5-digit code in §4 range, type↔normal-balance consistency, unique
-  code/name, required_dimensions exist), then emits `003_seed_account.up/down.sql` and stubs any missing
+  code/name, required_dimensions exist, **and §6-Required completeness — every account carries
+  `description`, `ifrs_line_item`, `allowed_books`, `owner`**), then emits `003_seed_account.up/down.sql` and stubs any missing
   `locales/*.json` key. Run in CI so a hand-edited seed or an untranslated account fails the build.
 - **S5 sqlc money mapping:** override `numeric` → `github.com/shopspring/decimal.Decimal` in sqlc.yaml
   (pgx/v5 + decimal). CoA `coa` is `int`; `element`/`type` are PG enums → Go typed constants.
