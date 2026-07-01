@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reckonna-app
+spec:
+  # FQDN reckonna-app.reckonna-app.svc.cluster.local:80 — the cloudflared ingress target (IT4).
+  selector:
+    app.kubernetes.io/name: reckonna-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
