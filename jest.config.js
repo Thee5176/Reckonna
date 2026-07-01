@@ -6,4 +6,7 @@ module.exports = {
   ],
   setupFilesAfterEnv: [],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
+  // Sibling git worktrees live under .claude/worktrees/ INSIDE the repo dir — without this,
+  // `npm test` from the main tree runs OTHER branches' suites (15 false failures on infra branches).
+  testPathIgnorePatterns: ['/node_modules/', '/\\.claude/'],
 };
