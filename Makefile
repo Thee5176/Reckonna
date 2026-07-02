@@ -4,7 +4,7 @@ SHELL := /usr/bin/env bash
 COMPOSE ?= docker compose
 MIGRATE_DB_URL ?= $(DATABASE_URL)   # rendered from Vault (vault agent / direnv) — never hardcoded
 
-.PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci
+.PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci k8s-validate otel-health otel-metrics-smoke
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -45,5 +45,15 @@ docs: ## Generate API + ERD docs (openapi served at /docs; tbls schema docs)
 
 docs-verify: ## Anti-drift: openapi lints + ERD matches schema
 	@command -v tbls >/dev/null && tbls diff || echo "docs-verify: tbls not installed (CI gate)"
+
+k8s-validate: ## Validate k8s manifests (kubeconform, CRD-tolerant)
+	@command -v kubeconform >/dev/null || { echo "k8s-validate: kubeconform not installed — skipping"; exit 0; }
+	@find infra/k8s -name '*.yaml' -not -name 'kustomization.yaml' -not -name '*values*.yaml' -print0 | xargs -0 -r kubeconform -strict -ignore-missing-schemas && echo "k8s-validate: OK"
+
+otel-health: ## Curl the otel-collector health endpoint (:13133)
+	@bash scripts/otel-health.sh
+
+otel-metrics-smoke: ## Assert reckonna_* metrics on the collector + Prometheus target UP
+	@bash scripts/otel-metrics-smoke.sh
 
 ci: tools-verify build test lint ## Local mirror of the CI gates
