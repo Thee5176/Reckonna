@@ -1,21 +1,28 @@
-# sqlc — DB-first codegen (mirrors the old jOOQ workflow). Schema = migrations; queries = db/query.
-# Money maps to shopspring/decimal (NUMERIC), ids to google/uuid. pgx/v5 driver. (plan 00 S2 / plan 01 S5)
+# sqlc — DB-first codegen (mirrors the old jOOQ workflow). Schema = migrations
+# (sqlc ignores *.down.sql); queries split per CQRS side so the query build has
+# NO write path (compile-time purity, IT9). Money → shopspring/decimal (NUMERIC),
+# ids → google/uuid, dates/timestamps → time.Time. pgx/v5 driver. (plan 03 S5)
 version: "2"
 sql:
+  # ── Command side — writes (INSERT/UPDATE/DELETE) ──
   - engine: "postgresql"
     schema: "db/migration"
-    queries: "db/query"
+    queries: "db/query/command"
     gen:
       go:
-        package: "repository"
-        out: "internal/repository"
+        package: "command"
+        out: "internal/repository/command"
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_interface: true
         emit_empty_slices: true
         emit_pointers_for_null_types: true
-        overrides:
+        overrides: &type_overrides
           - db_type: "numeric"
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+          - db_type: "pg_catalog.numeric"
             go_type:
               import: "github.com/shopspring/decimal"
               type: "Decimal"
@@ -23,3 +30,23 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - db_type: "date"
+            go_type: "time.Time"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+  # ── Query side — reads only (SELECT). cmd/query imports ONLY this package. ──
+  - engine: "postgresql"
+    schema: "db/migration"
+    queries: "db/query/query"
+    gen:
+      go:
+        package: "query"
+        out: "internal/repository/query"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_interface: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        overrides: *type_overrides
