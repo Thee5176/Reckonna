@@ -24,6 +24,7 @@ node_modules/
 .terraform/
 coverage/
 coverage.out
+storybook-static/
 
 # --- Tooling / generated ---
 graphify-out/
