@@ -1,0 +1,23 @@
+# [R1 / D3] Closes the missing scrape wire: the shared otel-collector Service has
+# empty metadata.labels and is not repo-owned (kustomize can't patch it). The
+# collector PODS carry app: otel-collector, so a PodMonitor selects them directly —
+# zero mutation of any shared resource.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: reckonna-otel-collector
+  namespace: observability
+  labels:
+    # Matches the Prometheus CR's podMonitorSelector (verified live: {release: kube-prometheus-stack}).
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  namespaceSelector:
+    matchNames:
+      - observability
+  podMetricsEndpoints:
+    - targetPort: 8889
+      path: /metrics
+      interval: 30s
