@@ -81,3 +81,68 @@ reckonna-backend (command + query pods) -> observability namespace
 Without this policy the exporters will fail to dial the collector once
 NetworkPolicies are default-deny in the backend namespace.
 <!-- otel-contract:end -->
+
+## Topology
+
+This plan is **additive wiring** into the existing homelab `observability` stack —
+it does not deploy or re-own the shared collector/Prometheus (plan 06 D1).
+
+```
+ command / query pods
+   │ OTLP/HTTP :4318 (traces + metrics)
+   ▼
+ otel-collector (shared, observability ns)  ── otlp/tempo ──► Grafana Cloud Tempo (traces)
+   │ prometheus exporter :8889
+   ▼
+ PodMonitor (this plan) ─ selects app=otel-collector, targetPort 8889
+   ▼
+ self-hosted Prometheus (kube-prometheus-stack)  ── remote_write ──► Grafana Cloud (metrics)
+   ▲                                                         
+   │ datasource                                             
+ self-hosted homelab Grafana  ◄── "Reckonna — RED" dashboard (this plan)
+```
+
+**The gap this closes:** the collector already exposes app metrics on `:8889`, but its
+Service is unlabeled so nothing scraped it → app metrics never reached Prometheus.
+A `PodMonitor` selecting the collector **pods** (`app: otel-collector`) fixes it with
+zero mutation of shared infra. Traces already flow.
+
+## What this plan ships
+
+| File | Purpose |
+|------|---------|
+| `infra/k8s/observability/podmonitor-reckonna-collector.yaml` | scrape the collector's `:8889` (S1) |
+| `infra/k8s/observability/dashboards/reckonna-red.json` + `README.md` | RED dashboard + provisioning paths (S2) |
+| `scripts/otel-{health,metrics-smoke,trace-smoke}.sh` | smokes (S4) |
+| this doc + `tests/otel-contract_test.sh` | the OTLP contract above (S3) |
+
+## Grafana provisioning
+
+Grafana is **self-hosted on the homelab** (D-GRAFANA, 2026-07-01), datasource = the
+self-hosted Prometheus. The exact location (in-k3s vs standalone) is unconfirmed — see
+`infra/k8s/observability/dashboards/README.md` for both provisioning paths (ConfigMap
+sidecar if in-k3s; provisioning dir / HTTP API / TF `grafana_dashboard` if standalone).
+The dashboard token, when needed, comes from Vault (`secret/app/grafana/homelab`) — never
+inline.
+
+**Collector-config preconditions** (verify against the live shared collector before the
+dashboard renders per-service): the prometheus exporter must keep `add_metric_suffixes=true`
+(default — else the `_total` suffix vanishes), and `service_name` is a resource attribute on
+`target_info`, not a metric label, unless `resource_to_telemetry_conversion` is enabled — so
+the dashboard queries join via `target_info` to be safe either way.
+
+## Apply order (human-only — `devops.md`)
+
+`kubectl apply` / `terraform apply` are human-only. Once the backend command/query
+Deployments exist (backend-Deploy plan) and emit OTLP:
+
+1. `kubectl apply -k infra/k8s/observability/` — the PodMonitor.
+2. Provision `dashboards/reckonna-red.json` to the self-hosted Grafana per its README.
+3. Verify: `make k8s-validate`, `make otel-health`, `make otel-metrics-smoke`; open the
+   "Reckonna — RED" dashboard.
+
+## Rollback
+
+`kubectl delete -k infra/k8s/observability/` removes only the PodMonitor (and, if TF-provisioned,
+`terraform destroy -target=grafana_dashboard.reckonna_red`). The shared collector, Prometheus,
+and Grafana Cloud remote_write are **untouched** — this plan added nothing to them.
