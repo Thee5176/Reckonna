@@ -12,7 +12,7 @@ export interface SkeletonProps {
   testID?: string;
 }
 
-export function Skeleton({ width = '100%', height = 14, style, testID }: SkeletonProps) {
+export function Skeleton({ width = '100%', height = 14, style, testID }: Readonly<SkeletonProps>) {
   return (
     <View
       testID={testID}

@@ -37,7 +37,7 @@ export function Field({
   focused = false,
   style,
   testID,
-}: FieldProps) {
+}: Readonly<FieldProps>) {
   const showError = invalid && !!error;
   return (
     <View style={[styles.field, style]}>

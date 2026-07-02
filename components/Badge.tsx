@@ -16,7 +16,7 @@ export interface BadgeProps {
   testID?: string;
 }
 
-export function Badge({ label, status = 'draft', style, testID }: BadgeProps) {
+export function Badge({ label, status = 'draft', style, testID }: Readonly<BadgeProps>) {
   const v = statusStyles[status];
   return (
     <View testID={testID} style={[styles.base, v.container, style]}>

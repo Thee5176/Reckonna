@@ -11,7 +11,7 @@ export interface SpinnerProps {
   testID?: string;
 }
 
-export function Spinner({ label, style, testID }: SpinnerProps) {
+export function Spinner({ label, style, testID }: Readonly<SpinnerProps>) {
   return (
     <View testID={testID} accessibilityLabel="loading" style={[styles.row, style]}>
       <ActivityIndicator color={color.ink} size="small" />

@@ -49,7 +49,7 @@ export function BalanceBar({
   checkLabel = 'Check · assets − (liab + equity)',
   style,
   testID,
-}: BalanceBarProps) {
+}: Readonly<BalanceBarProps>) {
   const balanced = isBalanced(debits, credits);
   const totalDebit = format2(sum(debits));
   const totalCredit = format2(sum(credits));
@@ -112,7 +112,7 @@ export function BalanceBar({
   );
 }
 
-function Pill({ balanced }: { balanced: boolean }) {
+function Pill({ balanced }: Readonly<{ balanced: boolean }>) {
   return (
     <View style={[styles.pill, balanced ? styles.pillOk : styles.pillBad]}>
       <Text style={[styles.pillText, { color: balanced ? color.credit : color.debit }]}>

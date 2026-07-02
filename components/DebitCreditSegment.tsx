@@ -27,7 +27,7 @@ export function DebitCreditSegment({
   onChange,
   style,
   testID,
-}: DebitCreditSegmentProps) {
+}: Readonly<DebitCreditSegmentProps>) {
   return (
     <View testID={testID} style={[styles.seg, style]}>
       {SEGMENTS.map((s, i) => {

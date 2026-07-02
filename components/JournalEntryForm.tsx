@@ -5,7 +5,7 @@
 // emits the plan-03 POST /command/journal-entries payload; the form NEVER calls
 // a network API itself (no axios/fetch here — hooks + live wiring are plan 05,
 // IT4). The signed-in owner is injected server-side, not in this payload.
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { color, font, radius } from '../theme/tokens';
@@ -54,6 +54,12 @@ function safeAmount(a: string): string {
   return /^[+-]?\d*\.?\d+$/.test(a) ? a : '0';
 }
 
+// A line tagged with a stable render key — account codes can repeat across
+// lines (two blank lines, two lines on the same account), so the array index
+// is the only "identity" a line has otherwise. `_key` never leaves this
+// component: buildPayload() below only ever reads account/amount/side.
+type KeyedLine = JournalLineInput & { readonly _key: number };
+
 export function JournalEntryForm({
   accounts,
   initialDate = '',
@@ -66,11 +72,16 @@ export function JournalEntryForm({
   onRetry,
   style,
   testID,
-}: JournalEntryFormProps) {
+}: Readonly<JournalEntryFormProps>) {
   const [date, setDate] = useState(initialDate);
   const [description, setDescription] = useState(initialDescription);
-  const [lines, setLines] = useState<JournalLineInput[]>(
-    initialLines && initialLines.length ? initialLines : [{ ...EMPTY_LINE }],
+  const nextKey = useRef(0);
+  function withKey(line: JournalLineInput): KeyedLine {
+    nextKey.current += 1;
+    return { ...line, _key: nextKey.current };
+  }
+  const [lines, setLines] = useState<KeyedLine[]>(() =>
+    (initialLines?.length ? initialLines : [{ ...EMPTY_LINE }]).map(withKey),
   );
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -83,7 +94,7 @@ export function JournalEntryForm({
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
   function addLine() {
-    setLines((prev) => [...prev, { ...EMPTY_LINE }]);
+    setLines((prev) => [...prev, withKey({ ...EMPTY_LINE })]);
   }
 
   function buildPayload(): JournalEntryPayload {
@@ -144,7 +155,7 @@ export function JournalEntryForm({
           {/* line items */}
           <View style={styles.lines}>
             {lines.map((line, i) => (
-              <View key={i} testID={`${id}-line-${i}`} style={styles.lineRow}>
+              <View key={line._key} testID={`${id}-line-${i}`} style={styles.lineRow}>
                 <DebitCreditSegment
                   testID={`${id}-line-${i}-side`}
                   value={line.side}
@@ -190,7 +201,7 @@ export function JournalEntryForm({
               <Text style={[styles.rcell, styles.rAmt, styles.muted]}>This entry</Text>
             </View>
             {lines.map((line, i) => (
-              <View key={i} testID={`${id}-review-${i}`} style={styles.reviewRow}>
+              <View key={line._key} testID={`${id}-review-${i}`} style={styles.reviewRow}>
                 <Text style={[styles.rcell, styles.rAcct]}>{line.account || '—'}</Text>
                 <View style={styles.rSide}>
                   <Badge
@@ -247,11 +258,11 @@ function StepTab({
   label,
   active,
   onPress,
-}: {
+}: Readonly<{
   label: string;
   active: boolean;
   onPress?: () => void;
-}) {
+}>) {
   return (
     <Pressable onPress={onPress} disabled={!onPress}>
       <Text style={[styles.stepTab, active && styles.stepTabActive]}>{label}</Text>

@@ -36,7 +36,7 @@ export function AccountSelect({
   error,
   style,
   testID,
-}: AccountSelectProps) {
+}: Readonly<AccountSelectProps>) {
   const [open, setOpen] = useState(false);
   const selected = accounts.find((a) => a.code === value);
   const display = selected ? `${selected.code} · ${selected.name}` : placeholder;

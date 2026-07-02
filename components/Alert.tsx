@@ -53,12 +53,19 @@ const SPEC: Record<ErrorCode, CodeSpec> = {
   },
 };
 
-export function Alert({ code = 'server_error', message, onRetry, style, testID }: AlertProps) {
+export function Alert({
+  code = 'server_error',
+  message,
+  onRetry,
+  style,
+  testID,
+}: Readonly<AlertProps>) {
   const spec = SPEC[code];
   const showRetry = spec.retryable && !!onRetry;
+  const alertTestId = testID ?? `alert-${code}`;
   return (
     <View
-      testID={testID ?? `alert-${code}`}
+      testID={alertTestId}
       accessibilityRole="alert"
       accessibilityLabel={code}
       style={[styles.alert, styles.error, style]}
@@ -68,7 +75,7 @@ export function Alert({ code = 'server_error', message, onRetry, style, testID }
         <Text style={styles.text}>{message ?? spec.defaultMessage}</Text>
         {showRetry ? (
           <Pressable
-            testID={`${testID ?? `alert-${code}`}-retry`}
+            testID={`${alertTestId}-retry`}
             accessibilityRole="button"
             onPress={onRetry}
           >

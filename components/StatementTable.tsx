@@ -49,7 +49,7 @@ export function StatementTable({
   onRetry,
   style,
   testID,
-}: StatementTableProps) {
+}: Readonly<StatementTableProps>) {
   const id = testID ?? 'stmt';
   return (
     <View testID={id} accessibilityLabel={`statement-${state}`} style={[styles.card, style]}>
@@ -83,12 +83,12 @@ export function StatementTable({
       {state === 'ready' ? (
         <View testID={`${id}-ready`}>
           {sections.map((section, si) => (
-            <View key={si} testID={`${id}-section-${si}`}>
+            <View key={section.label} testID={`${id}-section-${si}`}>
               <View style={[styles.row, styles.group]}>
                 <Text style={styles.groupText}>{section.label}</Text>
               </View>
-              {section.rows.map((r, ri) => (
-                <View key={ri} style={styles.row}>
+              {section.rows.map((r) => (
+                <View key={`${section.label}-${r.label}`} style={styles.row}>
                   <Text style={styles.rowLabel}>{r.label}</Text>
                   <Text
                     style={[

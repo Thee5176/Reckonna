@@ -26,7 +26,7 @@ export function Button({
   disabled = false,
   style,
   testID,
-}: ButtonProps) {
+}: Readonly<ButtonProps>) {
   const v = variantStyles[variant];
   return (
     <Pressable

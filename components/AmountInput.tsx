@@ -31,6 +31,25 @@ function isPositive(value: string): boolean {
   return !v.startsWith('-') && v !== '0.0000';
 }
 
+// What the underlying <Field> shows: the 4dp draft while focused, the
+// grouped 2dp display while blurred and numeric, or the raw value otherwise.
+function resolveDisplayValue(
+  focused: boolean,
+  draft: string | null,
+  canonical: string,
+  value: string,
+): string {
+  if (focused) {
+    // draft is always set in the same handler that sets focused=true (onFocus)
+    // or is cleared alongside it (onBlur), so `draft` is never null while
+    // `focused` is true — `?? canonical` is a defensive fallback only.
+    /* istanbul ignore next */
+    return draft ?? canonical;
+  }
+  if (value !== '' && isNumericLike(value)) return formatGrouped(value);
+  return value;
+}
+
 export function AmountInput({
   label = 'Amount · JPY',
   value = '',
@@ -39,7 +58,7 @@ export function AmountInput({
   error,
   style,
   testID,
-}: AmountInputProps) {
+}: Readonly<AmountInputProps>) {
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -48,14 +67,7 @@ export function AmountInput({
   const computedError = error ?? (nonPositive ? 'Amount must be positive.' : undefined);
 
   const canonical = value !== '' && isNumericLike(value) ? toValue(value) : value;
-  const displayValue = focused
-    ? // draft is always set in the same handler that sets focused=true (onFocus)
-      // or is cleared alongside it (onBlur), so `draft` is never null while
-      // `focused` is true — `?? canonical` is a defensive fallback only.
-      /* istanbul ignore next */ (draft ?? canonical)
-    : value !== '' && isNumericLike(value)
-      ? formatGrouped(value)
-      : value;
+  const displayValue = resolveDisplayValue(focused, draft, canonical, value);
 
   return (
     <Field

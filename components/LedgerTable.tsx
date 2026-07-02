@@ -53,7 +53,7 @@ export function LedgerTable({
   onNewEntry,
   style,
   testID,
-}: LedgerTableProps) {
+}: Readonly<LedgerTableProps>) {
   return (
     <View testID={testID} accessibilityLabel={`ledger-${state}`} style={[styles.ledger, style]}>
       {state === 'loading' ? (

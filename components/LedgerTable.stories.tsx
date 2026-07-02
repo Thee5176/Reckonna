@@ -45,7 +45,7 @@ type Story = StoryObj<typeof LedgerTable>;
 
 export const Loading: Story = { args: { state: 'loading' } };
 export const Empty: Story = { args: { state: 'empty', onNewEntry: () => {} } };
-export const Error: Story = {
+export const ErrorState: Story = {
   args: { state: 'error', errorCode: 'server_error', onRetry: () => {} },
 };
 export const ReadyGeneral: Story = { args: { state: 'ready', rows: ROWS, variant: 'general' } };

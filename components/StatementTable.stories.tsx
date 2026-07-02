@@ -65,6 +65,6 @@ export const ProfitAndLossReady: Story = {
 };
 export const Loading: Story = { args: { state: 'loading', title: 'Balance sheet' } };
 export const Empty: Story = { args: { state: 'empty', title: 'Balance sheet' } };
-export const Error: Story = {
+export const ErrorState: Story = {
   args: { state: 'error', title: 'Balance sheet', errorCode: 'server_error', onRetry: () => {} },
 };

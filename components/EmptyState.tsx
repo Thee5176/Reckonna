@@ -35,7 +35,7 @@ export function EmptyState({
   onAction,
   style,
   testID,
-}: EmptyStateProps) {
+}: Readonly<EmptyStateProps>) {
   return (
     <View testID={testID} accessibilityLabel="empty" style={[styles.empty, style]}>
       <View style={styles.mark}>

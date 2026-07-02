@@ -39,7 +39,7 @@ export function AppNav({
   brand = 'Reckonna',
   style,
   testID,
-}: AppNavProps) {
+}: Readonly<AppNavProps>) {
   const isWeb = (platform ?? (Platform.OS === 'web' ? 'web' : 'native')) === 'web';
   const id = testID ?? 'appnav';
 
