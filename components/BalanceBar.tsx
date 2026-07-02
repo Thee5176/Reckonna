@@ -32,6 +32,10 @@ function absDisplay(value: string): string {
 
 // Local 2dp grouped-free display for the big figures (design shows plain 2dp).
 function format2(value: string): string {
+  // value always comes from money.sum()/money.difference(), which render at
+  // STORE_SCALE (4dp) and therefore always include a '.' — the `f = ''`
+  // default is a defensive fallback unreachable through the public interface.
+  /* istanbul ignore next */
   const [i, f = ''] = value.split('.');
   return `${i}.${(f + '00').slice(0, 2)}`;
 }

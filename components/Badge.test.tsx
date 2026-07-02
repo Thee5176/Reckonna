@@ -19,6 +19,12 @@ describe('Badge (entry status §02)', () => {
     const { getByText } = render(<Badge label="借方" status="flagged" />);
     expect(getByText('借方')).toBeTruthy();
   });
+
+  it('defaults to draft when no status is given', () => {
+    const { getByText } = render(<Badge label="new" />);
+    const style = flatten(getByText('new').props.style);
+    expect(style.color).toBe(color.ink3);
+  });
 });
 
 function flatten(style: unknown): Record<string, unknown> {

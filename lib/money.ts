@@ -36,6 +36,10 @@ function parseScaled(input: string, scale: number): bigint {
 
 // Re-scale a BigInt from `from` dp to `to` dp, rounding half away from zero.
 function rescale(value: bigint, from: number, to: number): bigint {
+  // Both call sites (format/formatGrouped) only ever go STORE_SCALE(4) →
+  // DISPLAY_SCALE(2), so the widen-scale branch is unreachable through the
+  // public API. Kept as a defensive general-purpose guard.
+  /* istanbul ignore next */
   if (to >= from) return value * 10n ** BigInt(to - from);
   const factor = 10n ** BigInt(from - to);
   const q = value / factor;
@@ -54,6 +58,10 @@ function renderScaled(value: bigint, scale: number, grouped = false): string {
   let intPart = digits.slice(0, cut);
   const fracPart = digits.slice(cut);
   if (grouped) intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // renderScaled is only ever called at STORE_SCALE(4) or DISPLAY_SCALE(2) —
+  // both > 0 — so the whole-number (scale === 0) branch is unreachable
+  // through the public API. Kept as a defensive general-purpose guard.
+  /* istanbul ignore next */
   const body = scale > 0 ? `${intPart}.${fracPart}` : intPart;
   return negative ? `-${body}` : body;
 }

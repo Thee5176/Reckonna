@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import { AppNav } from './AppNav';
 
 describe('AppNav (AT7 — adaptive chrome §08)', () => {
@@ -33,5 +34,31 @@ describe('AppNav (AT7 — adaptive chrome §08)', () => {
     expect(getByTestId('nav-ledger').props.accessibilityState.selected).toBe(true);
     fireEvent.press(getByTestId('nav-reports'));
     expect(onNavigate).toHaveBeenCalledWith('reports');
+  });
+
+  it('AT7: the native tabbar also fires onNavigate and marks the active tab', () => {
+    const onNavigate = jest.fn();
+    const { getByTestId } = render(
+      <AppNav testID="nav" platform="native" activeKey="ledger" onNavigate={onNavigate} />,
+    );
+    expect(getByTestId('nav-ledger').props.accessibilityState.selected).toBe(true);
+    fireEvent.press(getByTestId('nav-reports'));
+    expect(onNavigate).toHaveBeenCalledWith('reports');
+  });
+
+  it('falls back to Platform.OS + default items/brand + default testID when unset', () => {
+    const { getByTestId } = render(<AppNav />);
+    expect(getByTestId('appnav')).toBeTruthy();
+  });
+
+  it('with no `platform` override, reads Platform.OS === "web" as the navrow chrome', () => {
+    const original = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const { getByTestId } = render(<AppNav testID="nav" />);
+      expect(getByTestId('nav').props.accessibilityLabel).toBe('navrow');
+    } finally {
+      Platform.OS = original;
+    }
   });
 });

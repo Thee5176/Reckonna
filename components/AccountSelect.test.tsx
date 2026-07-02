@@ -32,6 +32,22 @@ describe('AccountSelect (CoA picker §03)', () => {
     expect(getByText('1100 · Cash')).toBeTruthy();
   });
 
+  it('falls back to the default "account" testID prefix for options when none is given', () => {
+    const { getByText, getByTestId } = render(<AccountSelect label="Account · CoA" accounts={COA} />);
+    fireEvent.press(getByText('— select an account —'));
+    expect(getByTestId('account-opt-4101')).toBeTruthy();
+  });
+
+  it('an option without a CoA element renders without the muted element tag', () => {
+    const noElement: Account[] = [{ code: '9999', name: 'Suspense' }];
+    const { getByTestId, queryByText } = render(
+      <AccountSelect testID="acc" label="Account · CoA" accounts={noElement} />,
+    );
+    fireEvent.press(getByTestId('acc'));
+    expect(getByTestId('acc-opt-9999')).toBeTruthy();
+    expect(queryByText('Revenue')).toBeNull();
+  });
+
   it('invalid state borders debit and shows the error', () => {
     const { getByTestId, getByText } = render(
       <AccountSelect

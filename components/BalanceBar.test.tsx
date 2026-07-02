@@ -44,6 +44,37 @@ describe('BalanceBar (IT3 — 借方=貸方 derived, not passed §05)', () => {
     const { getByTestId } = render(<BalanceBar testID="bar" debits={['9']} credits={['1']} />);
     expect(getByTestId('bar').props.accessibilityLabel).toBe('unbalanced');
   });
+
+  it('a credit-heavy (negative) difference still displays as an absolute magnitude', () => {
+    const { getByTestId } = render(<BalanceBar testID="bar" debits={['500']} credits={['1000']} />);
+    expect(getByTestId('bar-diff').props.children).toBe('500.00');
+  });
+
+  it('falls back to the default testID when none is given', () => {
+    const { getByTestId } = render(<BalanceBar debits={['1000']} credits={['1000']} />);
+    expect(getByTestId('bar-diff')).toBeTruthy();
+  });
+
+  it('falls back to the default testID on the CTA button too', () => {
+    const { getByTestId } = render(
+      <BalanceBar debits={['1000']} credits={['1000']} ctaLabel="Review balance →" onCta={() => {}} />,
+    );
+    expect(getByTestId('bar-cta')).toBeTruthy();
+  });
+
+  it('the check variant renders the compact single-cell layout', () => {
+    const { getByTestId, getByText } = render(
+      <BalanceBar
+        testID="bs-check"
+        variant="check"
+        checkLabel="Check · assets − (liab + equity)"
+        debits={['96850.18']}
+        credits={['96850.18']}
+      />,
+    );
+    expect(getByTestId('bs-check').props.accessibilityLabel).toBe('balanced');
+    expect(getByText('Check · assets − (liab + equity)')).toBeTruthy();
+  });
 });
 
 function flatten(style: unknown): Record<string, unknown> {

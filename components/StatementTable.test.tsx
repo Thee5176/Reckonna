@@ -1,6 +1,18 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { StatementTable, type StatementSection } from './StatementTable';
+import { color } from '../theme/tokens';
+
+const PROFIT_AND_LOSS: StatementSection[] = [
+  {
+    label: 'Revenue · 収益',
+    rows: [{ label: '4101 · Sales revenue', amount: '42000.00', type: 'credit' }],
+  },
+  {
+    label: 'Expenses · 費用',
+    rows: [{ label: '6210 · Software', amount: '3840.00', type: 'debit' }],
+  },
+];
 
 const BALANCE_SHEET: StatementSection[] = [
   {
@@ -72,4 +84,26 @@ describe('StatementTable (AT6 / IT6 — §07)', () => {
     const err = render(<StatementTable testID="bs" state="error" title="P&L" errorCode="server_error" />);
     expect(err.getByTestId('bs-error')).toBeTruthy();
   });
+
+  it('a P&L colors revenue rows credit and expense rows debit', () => {
+    const { getByText } = render(
+      <StatementTable testID="pl" state="ready" title="P&L · 損益計算書" sections={PROFIT_AND_LOSS} />,
+    );
+    const revenue = flatten(getByText('42,000.00').props.style);
+    expect(revenue.color).toBe(color.credit);
+    const expense = flatten(getByText('3,840.00').props.style);
+    expect(expense.color).toBe(color.debit);
+  });
+
+  it('falls back to the default "stmt" testID when none is given', () => {
+    const { getByTestId } = render(
+      <StatementTable state="ready" title="Balance sheet" sections={BALANCE_SHEET} />,
+    );
+    expect(getByTestId('stmt')).toBeTruthy();
+  });
 });
+
+function flatten(style: unknown): Record<string, unknown> {
+  const arr = Array.isArray(style) ? style.flat(Infinity) : [style];
+  return Object.assign({}, ...arr.filter(Boolean));
+}

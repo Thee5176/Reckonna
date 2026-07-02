@@ -56,4 +56,29 @@ describe('LedgerTable (AT4 / IT6 — four states §06)', () => {
     });
     expect(new Set(labels).size).toBe(4);
   });
+
+  it('the subsidiary variant labels its status column "Ledger" instead of "Status"', () => {
+    const { getByText } = render(
+      <LedgerTable testID="lt" state="ready" rows={ROWS} variant="subsidiary" />,
+    );
+    expect(getByText('Ledger')).toBeTruthy();
+  });
+
+  it('falls back to the default "ledger" testID prefix when none is given', () => {
+    const { getByTestId } = render(<LedgerTable state="ready" rows={ROWS} />);
+    expect(getByTestId('ledger-row-1')).toBeTruthy();
+  });
+
+  it('falls back to the default "ledger" testID prefix in the loading/empty/error states too', () => {
+    const loading = render(<LedgerTable state="loading" />);
+    expect(loading.getByTestId('ledger-loading')).toBeTruthy();
+    loading.unmount();
+
+    const empty = render(<LedgerTable state="empty" />);
+    expect(empty.getByTestId('ledger-empty')).toBeTruthy();
+    empty.unmount();
+
+    const error = render(<LedgerTable state="error" />);
+    expect(error.getByTestId('ledger-error')).toBeTruthy();
+  });
 });

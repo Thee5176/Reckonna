@@ -31,4 +31,9 @@ describe('Alert (AT5 / IT5 — RFC 7807 code-keyed §04)', () => {
     const { queryByTestId } = render(<Alert code="unbalanced_entry" onRetry={jest.fn()} />);
     expect(queryByTestId('alert-unbalanced_entry-retry')).toBeNull();
   });
+
+  it('defaults to server_error when no code is given', () => {
+    const { getByTestId } = render(<Alert />);
+    expect(getByTestId('alert-server_error').props.accessibilityLabel).toBe('server_error');
+  });
 });

@@ -19,6 +19,16 @@ describe('IT2 — money: value precision (4dp store)', () => {
     expect(sum([])).toBe('0.0000');
     expect(sum(['4200.00', '-4200.00'])).toBe('0.0000');
   });
+
+  it('INVALID case: a non-decimal string throws at the boundary (fail early)', () => {
+    expect(() => toValue('not-a-number')).toThrow('money: not a decimal string');
+    expect(() => toValue('')).toThrow('money: not a decimal string');
+    expect(() => sum(['1000', 'abc'])).toThrow('money: not a decimal string');
+  });
+
+  it('a leading-dot decimal with no integer part defaults the integer to 0', () => {
+    expect(toValue('.5')).toBe('0.5000');
+  });
 });
 
 describe('IT2 — money: display (2dp)', () => {
@@ -27,6 +37,10 @@ describe('IT2 — money: display (2dp)', () => {
     expect(format('1000.335')).toBe('1000.34'); // 3rd decimal 5 → up
     expect(format('4200')).toBe('4200.00');
     expect(format('-50')).toBe('-50.00');
+  });
+
+  it('rounds a negative amount half-up too, magnitude increasing away from zero', () => {
+    expect(format('-1000.335')).toBe('-1000.34');
   });
 
   it('groups thousands for UI display (design: 4,200.00)', () => {

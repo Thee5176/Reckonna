@@ -49,7 +49,10 @@ export function AmountInput({
 
   const canonical = value !== '' && isNumericLike(value) ? toValue(value) : value;
   const displayValue = focused
-    ? draft ?? canonical
+    ? // draft is always set in the same handler that sets focused=true (onFocus)
+      // or is cleared alongside it (onBlur), so `draft` is never null while
+      // `focused` is true — `?? canonical` is a defensive fallback only.
+      /* istanbul ignore next */ (draft ?? canonical)
     : value !== '' && isNumericLike(value)
       ? formatGrouped(value)
       : value;
