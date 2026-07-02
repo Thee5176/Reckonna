@@ -7,19 +7,14 @@ package e2e
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
 	"fmt"
-	"math/big"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/thee5176/reckonna/internal/config"
@@ -48,7 +43,7 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	issuer, priv := mockIssuer(t)
+	issuer, priv := testsupport.MockOIDCIssuer(t, e2eKID)
 	pool := testsupport.NewPostgres(t)
 
 	bundle, err := config.LoadBundle(config.LocalesDir())
@@ -78,7 +73,7 @@ func newHarness(t *testing.T) *harness {
 
 // token mints a valid access token for the given sub.
 func (h *harness) token(t *testing.T, sub string) string {
-	return mint(t, h.priv, e2eKID, h.issuer, e2eAudience, sub, time.Now().Add(time.Hour))
+	return testsupport.MintJWT(t, h.priv, e2eKID, h.issuer, e2eAudience, sub, time.Now().Add(time.Hour))
 }
 
 // req performs an authenticated request and returns the recorder.
@@ -97,43 +92,6 @@ func (h *harness) req(t *testing.T, method, path, sub, body string, headers map[
 	w := httptest.NewRecorder()
 	h.router.ServeHTTP(w, req)
 	return w
-}
-
-// ---- mock OIDC issuer (RSA + discovery + JWKS) ----
-
-func mockIssuer(t *testing.T) (string, *rsa.PrivateKey) {
-	t.Helper()
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	mux := http.NewServeMux()
-	var issuer string
-	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"issuer":%q,"jwks_uri":%q,"id_token_signing_alg_values_supported":["RS256"]}`,
-			issuer, issuer+"/jwks")
-	})
-	mux.HandleFunc("/jwks", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		n := base64.RawURLEncoding.EncodeToString(priv.PublicKey.N.Bytes())
-		e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(priv.PublicKey.E)).Bytes())
-		fmt.Fprintf(w, `{"keys":[{"kty":"RSA","use":"sig","alg":"RS256","kid":%q,"n":%q,"e":%q}]}`, e2eKID, n, e)
-	})
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-	issuer = srv.URL
-	return issuer, priv
-}
-
-func mint(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud, sub string, exp time.Time) string {
-	t.Helper()
-	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
-		"iss": iss, "aud": aud, "sub": sub, "exp": exp.Unix(), "iat": time.Now().Unix(),
-	})
-	tok.Header["kid"] = kid
-	s, err := tok.SignedString(priv)
-	require.NoError(t, err)
-	return s
 }
 
 // entryJSON builds a single-currency entry body (debit/credit pair).
