@@ -4,7 +4,7 @@
 # Secret strings are ASSEMBLED at runtime (split literals) so this file contains no secret pattern
 # itself — otherwise the very hook under test would block writing this file. (plan 00 S6/S7)
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit
 HOOK=".claude/hooks/no-secrets.sh"
 command -v jq >/dev/null 2>&1 || { echo "FATAL: jq required"; exit 2; }
 pass=0; fail=0

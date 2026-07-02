@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudflared
+      annotations:
+        # IT5: Vault Agent Injector renders TUNNEL_TOKEN from secret/app/cloudflare/tunnel
+        # via role reckonna-cloudflared. No literal token anywhere (no env.value).
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: reckonna-cloudflared
+        vault.hashicorp.com/agent-inject-secret-cloudflared.env: secret/data/app/cloudflare/tunnel
+        vault.hashicorp.com/agent-inject-template-cloudflared.env: |
+          {{- with secret "secret/data/app/cloudflare/tunnel" -}}
+          export TUNNEL_TOKEN="{{ .Data.data.token }}"
+          {{- end -}}
+    spec:
+      serviceAccountName: cloudflared
+      # P1: spread the 2 replicas across nodes so a single-node drain can't take both
+      # (AT4 <=60s recovery). preferred (not required) so it still schedules on a 1-node homelab.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cloudflared
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2024.10.0
+          # IT8: remote-managed run — ingress rules are pulled from the Cloudflare API at
+          # startup, so there is no local config flag. Token is sourced from the Vault-rendered
+          # file, then exec's cloudflared so it never lands in a container env value.
+          command: ["/bin/sh", "-c"]
+          args:
+            - '. /vault/secrets/cloudflared.env && exec cloudflared tunnel --no-autoupdate run --token "$TUNNEL_TOKEN"'
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

@@ -13,6 +13,8 @@ on:
 env:
   GO_VERSION: "1.23"
   NODE_VERSION: "20"
+  VAULT_INTERNAL_URL: ${{ vars.VAULT_INTERNAL_URL }}
+  SONAR_INTERNAL_URL: ${{ vars.SONAR_INTERNAL_URL }}
 
 jobs:
   backend:
@@ -71,6 +73,40 @@ jobs:
       - run: terraform -chdir=infra init -backend=false
       - run: terraform -chdir=infra fmt -check -recursive
       - run: terraform -chdir=infra validate
+      # plan-02 cloudflare root — a separate module; -chdir=infra above never validates it.
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform validate
+
+  infra-manifests:
+    # Closes the CI coverage gap: kubeconform the kustomize render of every k8s base (IT1) and
+    # run the infra IT shell tests (IT4-IT9) + shellcheck. "CI green" now means "IT green".
+    name: k8s manifests + infra tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "${{ env.GO_VERSION }}" }
+      - name: Install kubeconform + shellcheck
+        run: |
+          go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      - name: kubeconform kustomize render — every base (IT1)
+        run: |
+          set -o pipefail
+          for base in infra/k8s/postgres infra/k8s/tailscale infra/k8s/reckonna-app infra/k8s/cloudflared; do
+            echo "== $base =="
+            kubectl kustomize "$base" | kubeconform -strict -ignore-missing-schemas -summary
+          done
+      - name: Infra IT shell tests (IT4-IT9 + scripts)
+        run: |
+          for t in tests/*_test.sh; do
+            echo "== $t =="
+            bash "$t"
+          done
+      - name: shellcheck
+        run: shellcheck -S warning scripts/tunnel-*.sh tests/*_test.sh
 
   gitleaks:
     name: gitleaks (secret scan)
@@ -112,7 +148,7 @@ jobs:
       - name: Fetch Sonar token from Vault   # vault-sourced (homelab/sonar/ci-token), internal cluster DNS
         uses: hashicorp/vault-action@v3
         with:
-          url: ${{ vars.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
+          url: ${{ env.VAULT_INTERNAL_URL || 'http://vault.vault.svc.cluster.local:8200' }}
           method: approle
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
@@ -121,7 +157,7 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@v4
         env:                                  # vault-sourced env via prior step
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
+          SONAR_HOST_URL: ${{ env.SONAR_INTERNAL_URL || 'http://sonar.sonarqube.svc.cluster.local:9000' }}
 
   # Always-run gate so `Sonar gate` can be a REQUIRED status check without
   # hanging PRs. The `sonar` job above is skippable (SONAR_ENABLED gate + the
