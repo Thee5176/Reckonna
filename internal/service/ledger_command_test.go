@@ -15,11 +15,11 @@ import (
 	"github.com/thee5176/reckonna/internal/testsupport"
 )
 
-func money(t *testing.T, s string) domain.Money {
-	t.Helper()
-	d, err := decimal.NewFromString(s)
-	require.NoError(t, err)
-	return domain.NewMoney(d)
+// money parses a decimal literal into domain.Money, panicking on malformed
+// input. Test literals are compile-time known-good, so RequireFromString (not
+// t.Fatal) keeps callers one-liners.
+func money(s string) domain.Money {
+	return domain.NewMoney(decimal.RequireFromString(s))
 }
 
 func jpy(v string) map[domain.DimensionType]string {
@@ -35,12 +35,25 @@ func countEntries(t *testing.T, pool *pgxpool.Pool, owner string) int {
 }
 
 // balanced returns a valid single-currency entry: debit 10000 / credit 40000.
-func balanced(t *testing.T, owner string) service.EntryInput {
+func balanced(owner string) service.EntryInput {
 	return service.EntryInput{
 		Date: time.Now(), Description: "sale", Owner: owner, Book: domain.BookBase,
 		Lines: []service.LineInput{
-			{AccountCode: 10000, Side: domain.SideDebit, Amount: money(t, "1000.0000"), Dimensions: jpy("JPY")},
-			{AccountCode: 40000, Side: domain.SideCredit, Amount: money(t, "1000.0000"), Dimensions: jpy("JPY")},
+			{AccountCode: 10000, Side: domain.SideDebit, Amount: money("1000.0000"), Dimensions: jpy("JPY")},
+			{AccountCode: 40000, Side: domain.SideCredit, Amount: money("1000.0000"), Dimensions: jpy("JPY")},
+		},
+	}
+}
+
+// escrowEntry returns an entry crediting the escrow account (21500, requires
+// counterparty) with the given counterparty value.
+func escrowEntry(owner, counterparty string) service.EntryInput {
+	return service.EntryInput{
+		Date: time.Now(), Owner: owner, Book: domain.BookBase,
+		Lines: []service.LineInput{
+			{AccountCode: 10000, Side: domain.SideDebit, Amount: money("100"), Dimensions: jpy("JPY")},
+			{AccountCode: 21500, Side: domain.SideCredit, Amount: money("100"),
+				Dimensions: map[domain.DimensionType]string{domain.DimCurrency: "JPY", domain.DimCounterparty: counterparty}},
 		},
 	}
 }
@@ -51,7 +64,7 @@ func TestPostLedger_BalanceAndValidation(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("balanced persists with version 1 (AT1)", func(t *testing.T) {
-		id, ver, err := svc.PostLedger(ctx, balanced(t, "ownerA"))
+		id, ver, err := svc.PostLedger(ctx, balanced("ownerA"))
 		require.NoError(t, err)
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", id.String())
 		assert.Equal(t, int32(1), ver)
@@ -59,22 +72,22 @@ func TestPostLedger_BalanceAndValidation(t *testing.T) {
 	})
 
 	t.Run("unbalanced rejected, no rows (AT2)", func(t *testing.T) {
-		in := balanced(t, "ownerUB")
-		in.Lines[1].Amount = money(t, "500.0000")
+		in := balanced("ownerUB")
+		in.Lines[1].Amount = money("500.0000")
 		_, _, err := svc.PostLedger(ctx, in)
 		require.ErrorIs(t, err, domain.ErrUnbalanced)
 		assert.Equal(t, 0, countEntries(t, pool, "ownerUB"))
 	})
 
 	t.Run("unknown account code rejected (AT10)", func(t *testing.T) {
-		in := balanced(t, "ownerX")
+		in := balanced("ownerX")
 		in.Lines[0].AccountCode = 99999
 		_, _, err := svc.PostLedger(ctx, in)
 		require.ErrorIs(t, err, service.ErrUnknownAccountCode)
 	})
 
 	t.Run("mixed currency rejected (AT14)", func(t *testing.T) {
-		in := balanced(t, "ownerMC")
+		in := balanced("ownerMC")
 		in.Lines[1].Dimensions = jpy("USD")
 		_, _, err := svc.PostLedger(ctx, in)
 		require.ErrorIs(t, err, domain.ErrMixedCurrency)
@@ -84,8 +97,8 @@ func TestPostLedger_BalanceAndValidation(t *testing.T) {
 		in := service.EntryInput{
 			Date: time.Now(), Owner: "ownerRD", Book: domain.BookBase,
 			Lines: []service.LineInput{
-				{AccountCode: 10000, Side: domain.SideDebit, Amount: money(t, "100"), Dimensions: jpy("JPY")},
-				{AccountCode: 21500, Side: domain.SideCredit, Amount: money(t, "100"), Dimensions: jpy("JPY")}, // escrow needs counterparty
+				{AccountCode: 10000, Side: domain.SideDebit, Amount: money("100"), Dimensions: jpy("JPY")},
+				{AccountCode: 21500, Side: domain.SideCredit, Amount: money("100"), Dimensions: jpy("JPY")}, // escrow needs counterparty
 			},
 		}
 		_, _, err := svc.PostLedger(ctx, in)
@@ -93,15 +106,7 @@ func TestPostLedger_BalanceAndValidation(t *testing.T) {
 	})
 
 	t.Run("escrow with counterparty accepted", func(t *testing.T) {
-		in := service.EntryInput{
-			Date: time.Now(), Owner: "ownerESC", Book: domain.BookBase,
-			Lines: []service.LineInput{
-				{AccountCode: 10000, Side: domain.SideDebit, Amount: money(t, "100"), Dimensions: jpy("JPY")},
-				{AccountCode: 21500, Side: domain.SideCredit, Amount: money(t, "100"),
-					Dimensions: map[domain.DimensionType]string{domain.DimCurrency: "JPY", domain.DimCounterparty: "external"}},
-			},
-		}
-		_, _, err := svc.PostLedger(ctx, in)
+		_, _, err := svc.PostLedger(ctx, escrowEntry("ownerESC", "external"))
 		require.NoError(t, err)
 	})
 }
@@ -114,15 +119,7 @@ func TestPostLedger_AtomicRollback(t *testing.T) {
 	svc := service.NewLedgerCommandService(pool)
 	ctx := context.Background()
 
-	in := service.EntryInput{
-		Date: time.Now(), Owner: "ownerATOM", Book: domain.BookBase,
-		Lines: []service.LineInput{
-			{AccountCode: 10000, Side: domain.SideDebit, Amount: money(t, "100"), Dimensions: jpy("JPY")},
-			{AccountCode: 21500, Side: domain.SideCredit, Amount: money(t, "100"),
-				Dimensions: map[domain.DimensionType]string{domain.DimCurrency: "JPY", domain.DimCounterparty: "ghost"}},
-		},
-	}
-	_, _, err := svc.PostLedger(ctx, in)
+	_, _, err := svc.PostLedger(ctx, escrowEntry("ownerATOM", "ghost"))
 	require.Error(t, err)
 	assert.Equal(t, 0, countEntries(t, pool, "ownerATOM"), "no partial rows after rollback")
 }
@@ -132,12 +129,12 @@ func TestUpdateAndDeleteLedger(t *testing.T) {
 	svc := service.NewLedgerCommandService(pool)
 	ctx := context.Background()
 
-	id, ver, err := svc.PostLedger(ctx, balanced(t, "ownerU"))
+	id, ver, err := svc.PostLedger(ctx, balanced("ownerU"))
 	require.NoError(t, err)
 	require.Equal(t, int32(1), ver)
 
 	t.Run("update bumps version (AT16 happy path, IT17)", func(t *testing.T) {
-		in := balanced(t, "ownerU")
+		in := balanced("ownerU")
 		in.Description = "corrected"
 		newVer, err := svc.UpdateLedger(ctx, id, 1, in)
 		require.NoError(t, err)
@@ -145,7 +142,7 @@ func TestUpdateAndDeleteLedger(t *testing.T) {
 	})
 
 	t.Run("stale version conflict (AT16)", func(t *testing.T) {
-		in := balanced(t, "ownerU")
+		in := balanced("ownerU")
 		_, err := svc.UpdateLedger(ctx, id, 1, in) // version is now 2
 		var vc *service.VersionConflictError
 		require.ErrorAs(t, err, &vc)
@@ -153,7 +150,7 @@ func TestUpdateAndDeleteLedger(t *testing.T) {
 	})
 
 	t.Run("cross-owner update forbidden (AT4)", func(t *testing.T) {
-		in := balanced(t, "intruder")
+		in := balanced("intruder")
 		_, err := svc.UpdateLedger(ctx, id, 2, in)
 		require.ErrorIs(t, err, service.ErrForbidden)
 	})
