@@ -33,6 +33,7 @@
     "react-native-web": "~0.21.0"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^20.2.0",
     "@storybook/react-native-web-vite": "^10.4.6",
     "@testing-library/react-native": "^12.8.0",
     "@types/jest": "^29.5.14",
