@@ -38,11 +38,13 @@ spec:
         - name: cloudflared
           image: cloudflare/cloudflared:2024.10.0
           # IT8: remote-managed run — ingress rules are pulled from the Cloudflare API at
-          # startup, so there is no local config flag. Token is sourced from the Vault-rendered
-          # file, then exec's cloudflared so it never lands in a container env value.
+          # startup, so there is no local config flag. The token is sourced from the
+          # Vault-rendered file into the process ENVIRONMENT only (cloudflared reads
+          # TUNNEL_TOKEN natively) — never on argv, where it would be readable via /proc.
+          # (security review 2026-07-06; deviates from the plan's literal `run --token`.)
           command: ["/bin/sh", "-c"]
           args:
-            - '. /vault/secrets/cloudflared.env && exec cloudflared tunnel --no-autoupdate run --token "$TUNNEL_TOKEN"'
+            - '. /vault/secrets/cloudflared.env && export TUNNEL_TOKEN && exec cloudflared tunnel --no-autoupdate run'
           securityContext:
             runAsNonRoot: true
             runAsUser: 65532
