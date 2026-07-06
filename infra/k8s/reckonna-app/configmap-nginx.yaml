@@ -7,7 +7,7 @@ data:
   # `reckonna_hello` (AT2). Everything else 404 (harness has no other surface).
   default.conf: |
     server {
-      listen 80;
+      listen 8080;
       server_name _;
       location = /healthz {
         default_type application/json;
