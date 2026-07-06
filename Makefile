@@ -25,6 +25,7 @@ migrate: ## Apply DB migrations (up)
 migrate-down: ## Roll back one migration
 	@migrate -path db/migration -database "$(MIGRATE_DB_URL)" down 1
 
+# Podman hosts: DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock TESTCONTAINERS_RYUK_DISABLED=true make test (ryuk hangs against podman's API otherwise)
 test: ## Run all Go tests with race detector
 	@if [ -n "$$(go list ./... 2>/dev/null)" ]; then go test ./... -race; else echo "test: no Go packages yet — skipping (plan 01)"; fi
 
