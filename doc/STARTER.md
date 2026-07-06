@@ -18,7 +18,7 @@ upstream Kubernetes.
 | Layer | Path | What you get |
 |-------|------|--------------|
 | **Claude harness setup** | `.claude/CLAUDE.md`, `.claude/rules/{devops,secrets-vault,tdd,migrations}.md`, `.claude/skills/`, `.claude/hooks/no-secrets.sh` | Conventional Commits + `Plan: S<n>` trailer enforcement; deny-by-default on inline secrets; V-model + TDD policy; Vault-as-only-source-of-truth policy |
-| **V-model planning** | `plans/02-infra-postgres-tailnet.md`, `V_MODEL_PLAN.md` | The plan that this starter executes, plus the project-wide V-model template |
+| **V-model planning** | `plans/01-infra-postgres-tailnet.md`, `V_MODEL_PLAN.md` | The plan that this starter executes, plus the project-wide V-model template |
 | **Terraform (vendor-neutral)** | `infra/main.tf`, `infra/providers.tf`, `infra/secrets.tf`, `infra/postgres.tf`, `infra/tailscale.tf` | `vault`, `kubernetes`, `tailscale` providers; namespaces; Tailscale ACL with admin-everything safety rule |
 | **Kustomize bases** | `infra/k8s/postgres/`, `infra/k8s/tailscale/` | PG StatefulSet w/ Vault Agent Injector annotations + NetworkPolicy + PDB + Service; Tailscale Operator OAuth Secret skeleton + Helm values |
 | **Operator/dev scripts** | `scripts/pg-endpoint.sh`, `scripts/tailnet-smoke.sh`, `scripts/pg-probe.sh` | Resolve the tailnet hostname, run `SELECT 1` from the operator side, stage-by-stage app-side connectivity probe with DNS→TCP→TLS→auth→query classification |
@@ -185,7 +185,7 @@ terraform plan -input=false -out=plan02.tfplan
 terraform apply -input=false plan02.tfplan
 ```
 
-> ⚠️ **Tailnet self-lockout risk.** `tailscale_acl.policy` uses `overwrite_existing_content = true` and is deny-by-default. The provided ACL keeps `autogroup:admin → *:*` so the operator does not lose kubectl/SSH reach. If you narrow this rule, replace its coverage with explicit per-device flows first or you will lock yourself out of the cluster. See `plans/02-infra-postgres-tailnet.md` "Known gaps" for the hardening follow-up.
+> ⚠️ **Tailnet self-lockout risk.** `tailscale_acl.policy` uses `overwrite_existing_content = true` and is deny-by-default. The provided ACL keeps `autogroup:admin → *:*` so the operator does not lose kubectl/SSH reach. If you narrow this rule, replace its coverage with explicit per-device flows first or you will lock yourself out of the cluster. See `plans/01-infra-postgres-tailnet.md` "Known gaps" for the hardening follow-up.
 
 ---
 
@@ -296,7 +296,7 @@ export PGSSLMODE=prefer
 - Public-internet exposure (intentional — see plan 02 decisions table)
 - Vault dynamic database credentials (rotation is currently manual — see runbook §5)
 
-Each gap has a tracking note in `plans/02-infra-postgres-tailnet.md` under "Known gaps".
+Each gap has a tracking note in `plans/01-infra-postgres-tailnet.md` under "Known gaps".
 
 ---
 

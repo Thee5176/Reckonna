@@ -1,7 +1,7 @@
 # Postgres over Tailscale — Operator Setup + Client Usage
 
 This document is the operator+developer how-to for the Postgres deployment in
-plan `plans/02-infra-postgres-tailnet.md`. It assumes:
+plan `plans/01-infra-postgres-tailnet.md`. It assumes:
 
 - An existing Kubernetes cluster with a default `StorageClass` and the
   HashiCorp **Vault Agent Injector** already running in namespace `vault`.
@@ -354,7 +354,7 @@ to a later plan).
 
 ## 6. References
 
-- Plan: `plans/02-infra-postgres-tailnet.md`
+- Plan: `plans/01-infra-postgres-tailnet.md`
 - Tailscale Operator chart: <https://pkgs.tailscale.com/helmcharts>
 - Vault Agent Injector: <https://developer.hashicorp.com/vault/docs/platform/k8s/injector>
 - Repo rules: `.claude/rules/secrets-vault.md`, `.claude/rules/devops.md`
