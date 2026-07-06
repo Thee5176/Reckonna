@@ -3,8 +3,11 @@ locals {
 }
 
 # Zone id for thee5176.com (apex is only READ here, never modified — AT6).
+# account_id scopes the lookup: an API token visible to multiple accounts could
+# otherwise resolve a same-named zone in the wrong account.
 data "cloudflare_zone" "reckonna" {
-  name = "thee5176.com"
+  account_id = local.account_id
+  name       = "thee5176.com"
 }
 
 # The named tunnel. Its runtime token (Vault -> cloudflared pod, S2) authenticates the

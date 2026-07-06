@@ -11,8 +11,11 @@ body=$(curl -sf --max-time 10 "$URL/healthz") || {
   echo "tunnel-health: request to $URL/healthz failed" >&2
   exit 1
 }
-if [ "$body" != '{"status":"ok"}' ]; then
+# Compare whitespace-insensitively: proxies/servers may append a trailing newline
+# to an otherwise-healthy body.
+compact=$(printf '%s' "$body" | tr -d '[:space:]')
+if [ "$compact" != '{"status":"ok"}' ]; then
   echo "tunnel-health: unexpected body from $URL/healthz: $body" >&2
   exit 2
 fi
-echo "tunnel-health: OK ($URL/healthz -> $body)"
+echo "tunnel-health: OK ($URL/healthz -> $compact)"

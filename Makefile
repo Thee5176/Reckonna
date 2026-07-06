@@ -5,7 +5,7 @@ COMPOSE ?= docker compose
 MIGRATE_DB_URL ?= $(DATABASE_URL)   # rendered from Vault (vault agent / direnv) — never hardcoded
 
 .PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci \
-        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe tunnel-health tunnel-dns-check
+        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe tunnel-health tunnel-dns-check tunnel-info
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -65,7 +65,7 @@ tf-validate: ## terraform fmt + validate on infra/ + infra/terraform/ (skips whe
 	  set -e; \
 	  for root in infra infra/terraform; do \
 	    echo "tf-validate: $$root"; \
-	    ( cd "$$root" && terraform fmt -check && terraform init -backend=false -input=false >/dev/null && terraform validate ); \
+	    ( cd "$$root" && terraform fmt -check -recursive && terraform init -backend=false -input=false >/dev/null && terraform validate ); \
 	  done; \
 	else \
 	  echo "tf-validate: terraform not installed — skipping (CI gate)"; \
@@ -82,6 +82,9 @@ tunnel-health: ## Check the public tunnel serves /healthz (https://reckonna.thee
 
 tunnel-dns-check: ## Check reckonna.thee5176.com resolves via the tunnel (*.cfargotunnel.com)
 	@bash scripts/tunnel-dns-check.sh
+
+tunnel-info: ## Print tunnel wiring + live cloudflared pod status (read-only)
+	@bash scripts/tunnel-info.sh
 
 pg-probe: ## App-side connectivity probe (DNS->TCP->query). Reads libpq PG* env vars.
 	@bash scripts/pg-probe.sh
