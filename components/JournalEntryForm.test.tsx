@@ -106,6 +106,30 @@ describe('JournalEntryForm (AT1 / AT2 / IT4 — §05)', () => {
     expect(getByTestId('jef-line-2')).toBeTruthy();
   });
 
+  it('remove-line button drops that row when there are 2+ lines', () => {
+    const { getByTestId, queryByTestId } = render(
+      <JournalEntryForm testID="jef" accounts={COA} initialLines={balanced} />,
+    );
+    expect(getByTestId('jef-line-1')).toBeTruthy();
+    fireEvent.press(getByTestId('jef-line-0-remove'));
+    expect(queryByTestId('jef-line-1')).toBeNull();
+    expect(getByTestId('jef-line-0')).toBeTruthy();
+  });
+
+  it('remove-line button is disabled and a no-op when a single line remains', () => {
+    const { getByTestId } = render(
+      <JournalEntryForm
+        testID="jef"
+        accounts={COA}
+        initialLines={[{ account: '1100', amount: '0', side: 'debit' }]}
+      />,
+    );
+    const btn = getByTestId('jef-line-0-remove');
+    expect(btn.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(btn); // disabled → onPress swallowed by Pressable
+    expect(getByTestId('jef-line-0')).toBeTruthy();
+  });
+
   it('Save draft fires onSaveDraft with the built payload from step 2', () => {
     const onSaveDraft = jest.fn();
     const { getByTestId } = render(

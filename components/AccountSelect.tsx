@@ -81,7 +81,7 @@ export function AccountSelect({
 }
 
 const styles = StyleSheet.create({
-  field: { flexDirection: 'column', gap: 5 },
+  field: { flexDirection: 'column', gap: 5, position: 'relative', zIndex: 1 },
   lab: { fontSize: 11, color: color.ink3, letterSpacing: 0.4, fontFamily: font.mono },
   control: {
     flexDirection: 'row',
@@ -99,11 +99,22 @@ const styles = StyleSheet.create({
   placeholder: { color: color.ink3 },
   chevron: { fontFamily: font.mono, fontSize: 10, color: color.ink3 },
   menu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: color.hairline,
     borderRadius: radius.sm - 1,
     backgroundColor: color.surface,
     overflow: 'hidden',
+    zIndex: 10,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   option: {
     flexDirection: 'row',

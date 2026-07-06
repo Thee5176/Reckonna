@@ -96,6 +96,14 @@ export function JournalEntryForm({
   function addLine() {
     setLines((prev) => [...prev, withKey({ ...EMPTY_LINE })]);
   }
+  function removeLine(index: number) {
+    // The trailing `: prev` guard is defensive — the remove button is disabled
+    // whenever only one line remains, so this branch is unreachable via UI.
+    setLines((prev) =>
+      /* istanbul ignore next */
+      prev.length > 1 ? prev.filter((_, i) => i !== index) : prev,
+    );
+  }
 
   function buildPayload(): JournalEntryPayload {
     return {
@@ -155,11 +163,16 @@ export function JournalEntryForm({
           {/* line items */}
           <View style={styles.lines}>
             {lines.map((line, i) => (
-              <View key={line._key} testID={`${id}-line-${i}`} style={styles.lineRow}>
+              <View
+                key={line._key}
+                testID={`${id}-line-${i}`}
+                style={[styles.lineRow, { zIndex: lines.length - i }]}
+              >
                 <DebitCreditSegment
                   testID={`${id}-line-${i}-side`}
                   value={line.side}
                   onChange={(side) => patchLine(i, { side })}
+                  style={styles.side}
                 />
                 <AccountSelect
                   testID={`${id}-line-${i}-account`}
@@ -175,6 +188,16 @@ export function JournalEntryForm({
                   onChangeValue={(amount) => patchLine(i, { amount })}
                   style={styles.amount}
                 />
+                <Pressable
+                  testID={`${id}-line-${i}-remove`}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove line"
+                  onPress={() => removeLine(i)}
+                  disabled={lines.length <= 1}
+                  style={[styles.removeBtn, lines.length <= 1 && styles.removeBtnDisabled]}
+                >
+                  <Text style={styles.removeBtnText}>×</Text>
+                </Pressable>
               </View>
             ))}
             <Pressable testID={`${id}-add-line`} onPress={addLine} style={styles.addLine}>
@@ -303,10 +326,24 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     padding: 12,
     gap: 12,
+    zIndex: 1,
   },
-  lineRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' },
+  lineRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap', position: 'relative' },
+  side: { alignSelf: 'flex-end' },
   grow: { flex: 1, minWidth: 160 },
   amount: { width: 140 },
+  removeBtn: {
+    width: 34,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: color.rule,
+    borderRadius: radius.sm - 1,
+    backgroundColor: color.surface,
+  },
+  removeBtnDisabled: { opacity: 0.35 },
+  removeBtnText: { fontFamily: font.mono, fontSize: 16, color: color.ink3, lineHeight: 18 },
   addLine: { paddingVertical: 6 },
   addLineText: { fontFamily: font.mono, fontSize: 13, color: color.ink3 },
   reviewCard: {
