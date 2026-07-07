@@ -51,7 +51,9 @@ const EMPTY_LINE: JournalLineInput = { account: '', amount: '', side: 'debit' };
 
 // A safe, numeric-only amount for the balance math (blank / partial → '0').
 function safeAmount(a: string): string {
-  return /^[+-]?\d*\.?\d+$/.test(a) ? a : '0';
+  // Non-backtracking (S5852): unambiguous alternation (digits-first vs dot-first)
+  // — no two \d* compete for the same digits, so no super-linear runtime.
+  return /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(a) ? a : '0';
 }
 
 // A line tagged with a stable render key — account codes can repeat across

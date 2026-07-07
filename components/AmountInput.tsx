@@ -21,7 +21,9 @@ export interface AmountInputProps {
 
 // A partial-but-parseable numeric draft (allows a lone '-' or '.' mid-typing).
 function isNumericLike(text: string): boolean {
-  return /^[+-]?\d*\.?\d*$/.test(text) && /\d/.test(text);
+  // Non-backtracking (S5852): the decimal group holds the second digit run, so
+  // the two \d* can never compete for the same digits (no super-linear runtime).
+  return /^[+-]?\d*(?:\.\d*)?$/.test(text) && /\d/.test(text);
 }
 
 // Positive means strictly > 0 at 4dp. Empty is treated as "not yet invalid".
