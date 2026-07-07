@@ -22,6 +22,17 @@ describe('AmountInput (§03 — tabular, 4dp under the hood)', () => {
     expect(onChangeValue).toHaveBeenLastCalledWith('4200.5000');
   });
 
+  it('REGRESSION: per-keystroke trailing-dot ("4200.") does not throw', () => {
+    // onChangeText fires the cumulative text every keystroke, so "4200.5" passes
+    // through "4200." — this must not throw out of the change handler.
+    const onChangeValue = jest.fn();
+    const { getByTestId } = render(<AmountInput testID="amt" onChangeValue={onChangeValue} />);
+    const input = getByTestId('amt');
+    fireEvent(input, 'focus');
+    expect(() => fireEvent.changeText(input, '4200.')).not.toThrow();
+    expect(onChangeValue).toHaveBeenLastCalledWith('4200.0000');
+  });
+
   it('IT7: blurred display rounds to 2dp grouped; focused reveals 4dp', () => {
     const { getByTestId, rerender } = render(<AmountInput testID="amt" value="4200" />);
     expect(getByTestId('amt').props.value).toBe('4,200.00'); // blurred: 2dp grouped

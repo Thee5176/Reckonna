@@ -15,7 +15,11 @@ const DISPLAY_SCALE = 2;
 // boundary — plan invariant "validate early").
 function parseScaled(input: string, scale: number): bigint {
   const trimmed = input.trim();
-  const m = /^([+-]?)(\d*)(?:\.(\d+))?$/.exec(trimmed);
+  // Fraction group is \d* (not \d+) so a trailing-dot draft like "4200." parses
+  // as 4200 — AmountInput.isNumericLike accepts that mid-typing state, and
+  // onChangeText → toValue must not throw on it. Bare "." / "-" still rejected
+  // by the guard below (both int + frac empty).
+  const m = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(trimmed);
   if (!m || (m[2] === '' && (m[3] ?? '') === '')) {
     throw new Error(`money: not a decimal string: ${JSON.stringify(input)}`);
   }

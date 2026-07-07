@@ -29,6 +29,17 @@ describe('IT2 — money: value precision (4dp store)', () => {
   it('a leading-dot decimal with no integer part defaults the integer to 0', () => {
     expect(toValue('.5')).toBe('0.5000');
   });
+
+  it('REGRESSION: a trailing-dot draft ("4200.") parses instead of throwing', () => {
+    // AmountInput.onChangeText fires per keystroke, so "4200.5" passes through
+    // the intermediate "4200." — parseScaled must accept it (empty fraction = 0).
+    expect(toValue('4200.')).toBe('4200.0000');
+    expect(toValue('5.')).toBe('5.0000');
+    expect(toValue('-5.')).toBe('-5.0000');
+    // bare "." / "-" (no digits at all) still fail early
+    expect(() => toValue('.')).toThrow('money: not a decimal string');
+    expect(() => toValue('-')).toThrow('money: not a decimal string');
+  });
 });
 
 describe('IT2 — money: display (2dp)', () => {
