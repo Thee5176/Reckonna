@@ -3,7 +3,7 @@
 // and the error line renders. Presentational: value in, onChangeText out.
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import type { KeyboardTypeOptions, StyleProp, ViewStyle } from 'react-native';
+import type { KeyboardTypeOptions, StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { color, font, radius } from '../theme/tokens';
 import { withAlpha } from '../theme/color';
 
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderColor: color.accent,
     // focus ring — highlight at ~45% (design §03)
     boxShadow: `0 0 0 3px ${withAlpha(color.highlight, 0.45)}`,
-  } as ViewStyle,
+  } as TextStyle,
   invalid: { borderColor: color.debit },
   err: { fontSize: 10.5, color: color.debit, fontFamily: font.mono },
 });
