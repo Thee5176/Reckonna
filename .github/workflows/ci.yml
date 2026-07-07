@@ -107,7 +107,7 @@ jobs:
             bash "$t"
           done
       - name: shellcheck
-        run: shellcheck -S warning scripts/tunnel-*.sh tests/*_test.sh
+        run: shellcheck -S warning scripts/tunnel-*.sh scripts/deploy.sh tests/*_test.sh
 
   gitleaks:
     name: gitleaks (secret scan)
