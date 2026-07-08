@@ -116,30 +116,45 @@ func newContractRouter(t *testing.T) *gin.Engine {
 	return r
 }
 
-// call drives path through r as sub, then checks the response against the
-// spec operation matched for method+path. When checkRequest is true it also
-// asserts the outgoing request itself is spec-valid (skip this for
-// deliberately protocol-malformed requests, e.g. the 415 case, where a
-// request-validation error is the expected outcome, not a test bug).
-func call(t *testing.T, r http.Handler, method, path, sub, body string, headers map[string]string, checkRequest bool) *httptest.ResponseRecorder {
+// callReq bundles one call's request shape (method/path/sub/body/headers plus
+// the checkRequest flag) into a single argument, so call stays under
+// golangci-lint's S107 parameter-count limit instead of taking each field
+// positionally.
+type callReq struct {
+	method       string
+	path         string
+	sub          string
+	body         string
+	headers      map[string]string
+	checkRequest bool
+}
+
+// call drives req.path through r as req.sub, then checks the response
+// against the spec operation matched for req.method+req.path. When
+// req.checkRequest is true it also asserts the outgoing request itself is
+// spec-valid (skip this for deliberately protocol-malformed requests, e.g.
+// the 415 case, where a request-validation error is the expected outcome,
+// not a test bug).
+func call(t *testing.T, r http.Handler, req callReq) *httptest.ResponseRecorder {
 	t.Helper()
 	_, oaRouter := loadSpec(t)
+	method, path, sub, body, headers, checkRequest := req.method, req.path, req.sub, req.body, req.headers, req.checkRequest
 
 	findReq := httptest.NewRequest(method, path, nil)
 	route, params, err := oaRouter.FindRoute(findReq)
 	require.NoErrorf(t, err, "no api/openapi.yaml route matches %s %s", method, path)
 
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	httpReq := httptest.NewRequest(method, path, strings.NewReader(body))
 	if body != "" {
-		req.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("X-Test-Sub", sub)
+	httpReq.Header.Set("X-Test-Sub", sub)
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		httpReq.Header.Set(k, v)
 	}
 
 	if checkRequest {
-		valReq := req.Clone(req.Context())
+		valReq := httpReq.Clone(httpReq.Context())
 		valReq.Body = http.NoBody
 		if body != "" {
 			valReq.Body = io.NopCloser(strings.NewReader(body))
@@ -152,10 +167,10 @@ func call(t *testing.T, r http.Handler, method, path, sub, body string, headers 
 	}
 
 	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+	r.ServeHTTP(w, httpReq)
 
 	respInput := &openapi3filter.ResponseValidationInput{
-		RequestValidationInput: &openapi3filter.RequestValidationInput{Request: req, PathParams: params, Route: route},
+		RequestValidationInput: &openapi3filter.RequestValidationInput{Request: httpReq, PathParams: params, Route: route},
 		Status:                 w.Code,
 		Header:                 w.Header(),
 	}

@@ -28,7 +28,7 @@ func decodeID(t *testing.T, w *httptest.ResponseRecorder) string {
 // ETag + Location headers, all matching the spec.
 func TestContract_CreateJournalEntry_201(t *testing.T) {
 	r := newContractRouter(t)
-	w := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	w := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 
 	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 	assert.Regexp(t, `^"\d+"$`, w.Header().Get("ETag"))
@@ -47,7 +47,7 @@ func TestContract_CreateJournalEntry_201(t *testing.T) {
 // unbalanced_entry, response validated against the Problem schema.
 func TestContract_CreateJournalEntry_Unbalanced_422(t *testing.T) {
 	r := newContractRouter(t)
-	w := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cUnbalanced, nil, true)
+	w := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cUnbalanced, nil, true})
 
 	require.Equal(t, http.StatusUnprocessableEntity, w.Code)
 	var p problem.Problem
@@ -61,8 +61,8 @@ func TestContract_CreateJournalEntry_Unbalanced_422(t *testing.T) {
 // we only assert the response, not the request.
 func TestContract_CreateJournalEntry_WrongContentType_415(t *testing.T) {
 	r := newContractRouter(t)
-	w := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced,
-		map[string]string{"Content-Type": "text/plain"}, false)
+	w := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced,
+		map[string]string{"Content-Type": "text/plain"}, false})
 
 	require.Equal(t, http.StatusUnsupportedMediaType, w.Code)
 	var p problem.Problem
@@ -74,10 +74,10 @@ func TestContract_CreateJournalEntry_WrongContentType_415(t *testing.T) {
 // force-opt-in-to-concurrency-control rule.
 func TestContract_UpdateJournalEntry_MissingIfMatch_428(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodPut, "/command/journal-entries/"+id, "ownerA", cBalanced, nil, true)
+	w := call(t, r, callReq{http.MethodPut, "/command/journal-entries/" + id, "ownerA", cBalanced, nil, true})
 	require.Equal(t, http.StatusPreconditionRequired, w.Code)
 }
 
@@ -85,11 +85,11 @@ func TestContract_UpdateJournalEntry_MissingIfMatch_428(t *testing.T) {
 // carries current_version, matching the spec's Problem.current_version field.
 func TestContract_UpdateJournalEntry_StaleIfMatch_409(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodPut, "/command/journal-entries/"+id, "ownerA", cBalanced,
-		map[string]string{"If-Match": `"99"`}, true)
+	w := call(t, r, callReq{http.MethodPut, "/command/journal-entries/" + id, "ownerA", cBalanced,
+		map[string]string{"If-Match": `"99"`}, true})
 	require.Equal(t, http.StatusConflict, w.Code)
 
 	var p problem.Problem
@@ -104,10 +104,10 @@ func TestContract_UpdateJournalEntry_StaleIfMatch_409(t *testing.T) {
 // spec's response schema for GET /query/journal-entries/{id}.
 func TestContract_GetJournalEntry_CrossOwner_404(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodGet, "/query/journal-entries/"+id, "ownerB", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/journal-entries/" + id, "ownerB", "", nil, true})
 	require.Equal(t, http.StatusNotFound, w.Code)
 	var p problem.Problem
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &p))
@@ -118,10 +118,10 @@ func TestContract_GetJournalEntry_CrossOwner_404(t *testing.T) {
 // including the ETag header, against the spec.
 func TestContract_GetJournalEntry_OwnRoundTrip(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodGet, "/query/journal-entries/"+id, "ownerA", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/journal-entries/" + id, "ownerA", "", nil, true})
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Regexp(t, `^"\d+"$`, w.Header().Get("ETag"))
 
@@ -134,20 +134,20 @@ func TestContract_GetJournalEntry_OwnRoundTrip(t *testing.T) {
 // TestContract_GetJournalLines checks GET /query/journal-lines/{id}.
 func TestContract_GetJournalLines(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodGet, "/query/journal-lines/"+id, "ownerA", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/journal-lines/" + id, "ownerA", "", nil, true})
 	require.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestContract_DeleteJournalEntry_204 checks the 204-no-body success shape.
 func TestContract_DeleteJournalEntry_204(t *testing.T) {
 	r := newContractRouter(t)
-	created := call(t, r, http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true)
+	created := call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerA", cBalanced, nil, true})
 	id := decodeID(t, created)
 
-	w := call(t, r, http.MethodDelete, "/command/journal-entries/"+id, "ownerA", "", nil, true)
+	w := call(t, r, callReq{http.MethodDelete, "/command/journal-entries/" + id, "ownerA", "", nil, true})
 	require.Equal(t, http.StatusNoContent, w.Code)
 	assert.Empty(t, w.Body.Bytes())
 }
@@ -156,7 +156,7 @@ func TestContract_DeleteJournalEntry_204(t *testing.T) {
 // wrong cursor -> 400 invalid_cursor.
 func TestContract_ListJournalEntries_InvalidCursor_400(t *testing.T) {
 	r := newContractRouter(t)
-	w := call(t, r, http.MethodGet, "/query/journal-entries?cursor=short", "ownerA", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/journal-entries?cursor=short", "ownerA", "", nil, true})
 	require.Equal(t, http.StatusBadRequest, w.Code)
 	var p problem.Problem
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &p))
@@ -167,10 +167,10 @@ func TestContract_ListJournalEntries_InvalidCursor_400(t *testing.T) {
 // {items, next_cursor, has_more} against the spec.
 func TestContract_ListJournalEntries_Page(t *testing.T) {
 	r := newContractRouter(t)
-	call(t, r, http.MethodPost, "/command/journal-entries", "ownerPage", cBalanced, nil, true)
-	call(t, r, http.MethodPost, "/command/journal-entries", "ownerPage", cBalanced, nil, true)
+	call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerPage", cBalanced, nil, true})
+	call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerPage", cBalanced, nil, true})
 
-	w := call(t, r, http.MethodGet, "/query/journal-entries?limit=1", "ownerPage", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/journal-entries?limit=1", "ownerPage", "", nil, true})
 	require.Equal(t, http.StatusOK, w.Code)
 	var page qsvc.PageView
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
@@ -182,7 +182,7 @@ func TestContract_ListJournalEntries_Page(t *testing.T) {
 // TestContract_ListAccounts checks GET /query/accounts against the spec.
 func TestContract_ListAccounts(t *testing.T) {
 	r := newContractRouter(t)
-	w := call(t, r, http.MethodGet, "/query/accounts", "ownerA", "", nil, true)
+	w := call(t, r, callReq{http.MethodGet, "/query/accounts", "ownerA", "", nil, true})
 	require.Equal(t, http.StatusOK, w.Code)
 }
 
@@ -190,15 +190,15 @@ func TestContract_ListAccounts(t *testing.T) {
 // path and the "empty -> 400" rule.
 func TestContract_Balances(t *testing.T) {
 	r := newContractRouter(t)
-	call(t, r, http.MethodPost, "/command/journal-entries", "ownerBal", cBalanced, nil, true)
+	call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerBal", cBalanced, nil, true})
 
 	t.Run("populated", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/query/balances?account=10000&account=40000", "ownerBal", "", nil, true)
+		w := call(t, r, callReq{http.MethodGet, "/query/balances?account=10000&account=40000", "ownerBal", "", nil, true})
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
 	t.Run("empty -> 400", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/query/balances", "ownerBal", "", nil, false)
+		w := call(t, r, callReq{http.MethodGet, "/query/balances", "ownerBal", "", nil, false})
 		require.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
@@ -206,15 +206,15 @@ func TestContract_Balances(t *testing.T) {
 // TestContract_Statements checks both statement endpoints against the spec.
 func TestContract_Statements(t *testing.T) {
 	r := newContractRouter(t)
-	call(t, r, http.MethodPost, "/command/journal-entries", "ownerStmt", cBalanced, nil, true)
+	call(t, r, callReq{http.MethodPost, "/command/journal-entries", "ownerStmt", cBalanced, nil, true})
 
 	t.Run("balance-sheet", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/query/statements/balance-sheet", "ownerStmt", "", nil, true)
+		w := call(t, r, callReq{http.MethodGet, "/query/statements/balance-sheet", "ownerStmt", "", nil, true})
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 
 	t.Run("profit-loss", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/query/statements/profit-loss", "ownerStmt", "", nil, true)
+		w := call(t, r, callReq{http.MethodGet, "/query/statements/profit-loss", "ownerStmt", "", nil, true})
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 }
@@ -223,11 +223,11 @@ func TestContract_Statements(t *testing.T) {
 func TestContract_Health(t *testing.T) {
 	r := newContractRouter(t)
 	t.Run("command", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/command/health", "", "", nil, true)
+		w := call(t, r, callReq{http.MethodGet, "/command/health", "", "", nil, true})
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 	t.Run("query", func(t *testing.T) {
-		w := call(t, r, http.MethodGet, "/query/health", "", "", nil, true)
+		w := call(t, r, callReq{http.MethodGet, "/query/health", "", "", nil, true})
 		require.Equal(t, http.StatusOK, w.Code)
 	})
 }
