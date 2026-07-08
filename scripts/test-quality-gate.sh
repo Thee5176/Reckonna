@@ -58,6 +58,7 @@ ensure_project() {
     --data-urlencode "projectKey=$key" >/dev/null
 }
 
+# shellcheck disable=SC2317  # invoked indirectly via cleanup() EXIT trap
 delete_project() {
   local key="$1"
   [ "$KEEP_PROJECTS" = "1" ] && { echo "  (KEEP_PROJECTS=1, skipping delete of $key)"; return; }
@@ -125,6 +126,7 @@ run_case() {
   fi
 }
 
+# shellcheck disable=SC2317  # invoked indirectly via EXIT trap
 cleanup() {
   delete_project "reckonna-qg-test-bad"
   delete_project "reckonna-qg-test-good"

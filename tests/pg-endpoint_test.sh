@@ -62,8 +62,9 @@ echo "$out" | grep -q '^ip=100.64.10.5$' \
   || { echo "FAIL: --url"; exit 1; }
 
 # 5. unknown peer (tailscale up, device absent) → kubectl fallback neutralized → exit 3.
-RECKONNA_PG_DEVICE="ghost-peer" "$SCRIPT" >/dev/null 2>&1 && \
-  { echo "FAIL: missing device should exit non-zero"; exit 1; } || true
+if RECKONNA_PG_DEVICE="ghost-peer" "$SCRIPT" >/dev/null 2>&1; then
+  echo "FAIL: missing device should exit non-zero"; exit 1
+fi
 
 # 6. neither tailscale nor kubectl available → exit 2.
 # Build an isolated PATH with only minimal bash builtins location.
@@ -73,7 +74,8 @@ for b in bash sh sed awk grep head jq; do
   src="$(command -v "$b" 2>/dev/null || true)"
   [[ -n "$src" ]] && ln -s "$src" "$EMPTY/$b"
 done
-PATH="$EMPTY" "$SCRIPT" >/dev/null 2>&1 && \
-  { echo "FAIL: empty PATH should exit non-zero"; exit 1; } || true
+if PATH="$EMPTY" "$SCRIPT" >/dev/null 2>&1; then
+  echo "FAIL: empty PATH should exit non-zero"; exit 1
+fi
 
 echo "pg-endpoint_test: OK"

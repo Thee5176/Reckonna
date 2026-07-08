@@ -42,7 +42,6 @@ while [[ $# -gt 0 ]]; do
     -h|--help) usage; exit 0 ;;
     *) echo "pg-probe: unknown arg '$1'" >&2; usage >&2; exit 1 ;;
   esac
-  shift
 done
 
 for var in PGHOST PGUSER PGPASSWORD PGDATABASE; do

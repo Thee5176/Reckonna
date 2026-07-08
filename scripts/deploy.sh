@@ -116,7 +116,7 @@ do_verify() {
   make -C "$ROOT" tunnel-health    || rc=1     # AT1
   RECKONNA_URL="${RECKONNA_URL:-https://reckonna.thee5176.com}" bash "$ROOT/tests/hello_e2e_test.sh" || rc=1  # AT2
   kubectl get pods -n cloudflared -o wide || rc=1
-  [ "$rc" -eq 0 ] && info "verify: all smoke checks green" || warn "verify: one or more checks failed"
+  if [ "$rc" -eq 0 ]; then info "verify: all smoke checks green"; else warn "verify: one or more checks failed"; fi
   return "$rc"
 }
 

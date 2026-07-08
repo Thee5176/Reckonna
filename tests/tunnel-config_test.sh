@@ -19,7 +19,8 @@ grep -Eq 'service[[:space:]]*=[[:space:]]*"http_status:404"' "$TF" || fail "404 
 # passes. Assert the catch-all line comes strictly after the hostname rule.
 HOST_LINE=$(grep -nE 'hostname[[:space:]]*=[[:space:]]*"reckonna.thee5176.com"' "$TF" | head -1 | cut -d: -f1)
 CATCH_LINE=$(grep -nE 'service[[:space:]]*=[[:space:]]*"http_status:404"' "$TF" | head -1 | cut -d: -f1)
-[ -n "$HOST_LINE" ] && [ -n "$CATCH_LINE" ] && [ "$CATCH_LINE" -gt "$HOST_LINE" ] \
-  || fail "http_status:404 catch-all must come AFTER the reckonna hostname rule (got hostname@$HOST_LINE, catch-all@$CATCH_LINE)"
+if ! { [ -n "$HOST_LINE" ] && [ -n "$CATCH_LINE" ] && [ "$CATCH_LINE" -gt "$HOST_LINE" ]; }; then
+  fail "http_status:404 catch-all must come AFTER the reckonna hostname rule (got hostname@$HOST_LINE, catch-all@$CATCH_LINE)"
+fi
 
 echo "tunnel-config: OK (IT4 - reckonna.thee5176.com -> app svc + 404 catch-all, order verified)"
