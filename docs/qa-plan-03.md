@@ -18,15 +18,15 @@ Agent todo list produced by `/qa-plan`. Enumeration only — **not** validation.
 
 ## Group A — Acceptance (E2E, `//go:build e2e`)
 
-- [ ] **A1 — AT1** balanced create → persist+read, 借方=貸方 · `E TestE2E_CreateAndRead` → 201, retrievable, sum debit=credit
-- [ ] **A2 — AT2** unbalanced 1000/500 → reject · `E TestE2E_SemanticRejections/unbalanced` → 422 `application/problem+json`, `code:unbalanced_entry`, `errors[0]{line_index:0,field:amount,issue:debit_credit_mismatch}` **[MONEY: unbalanced-ledger rejection]**
-- [ ] **A3 — AT3** owner scope — A sees only A's · `E TestE2E_OwnerScope` → only A rows; cross-owner GET → 404 (T16)
-- [ ] **A4 — AT4** B PUT/DELETE A's entry · `E TestE2E_OwnerScope/bob cannot delete` → 403
-- [ ] **A5 — AT5** DELETE entry cascades lines · `E` (delete case) → entry + all lines gone
-- [ ] **A6 — AT6** balance-sheet · `E TestE2E_Statements/balance sheet` → assets == liabilities+equity
-- [ ] **A7 — AT7** profit-loss · `E TestE2E_Statements/profit-loss` → netIncome == revenue−expenses
-- [ ] **A8 — AT8** no/invalid JWT any non-health · `E TestE2E_Unauthorized` → 401
-- [ ] **A9 — AT9** seeded CoA list · `E` coa case → full 20-account chart
+- [x] **A1 — AT1** balanced create → persist+read, 借方=貸方 · `E TestE2E_CreateAndRead` → 201, retrievable, sum debit=credit
+- [x] **A2 — AT2** unbalanced 1000/500 → reject · `E TestE2E_SemanticRejections/unbalanced` → 422 `application/problem+json`, `code:unbalanced_entry`, `errors[0]{line_index:0,field:amount,issue:debit_credit_mismatch}` **[MONEY: unbalanced-ledger rejection]**
+- [x] **A3 — AT3** owner scope — A sees only A's · `E TestE2E_OwnerScope` → only A rows; cross-owner GET → 404 (T16)
+- [x] **A4 — AT4** B PUT/DELETE A's entry · `E TestE2E_OwnerScope/bob cannot delete` → 403
+- [x] **A5 — AT5** DELETE entry cascades lines · `E` (delete case) → entry + all lines gone
+- [x] **A6 — AT6** balance-sheet · `E TestE2E_Statements/balance sheet` → assets == liabilities+equity
+- [x] **A7 — AT7** profit-loss · `E TestE2E_Statements/profit-loss` → netIncome == revenue−expenses
+- [x] **A8 — AT8** no/invalid JWT any non-health · `E TestE2E_Unauthorized` → 401
+- [x] **A9 — AT9** seeded CoA list · `E` coa case → full 20-account chart
 - [ ] **A10 — AT10** unknown account code · `E TestE2E_SemanticRejections/unknown account` → 422
 - [ ] **A11 — AT11** decimal round-trip 1000.3333 / 1000.33335 / 0.12345 · `E TestE2E_MoneyPrecision` (table 3) → NUMERIC(20,4) stable, no float drift
 - [ ] **A12 — AT13** single-currency USD entry · `E TestE2E_CurrencyDimension/single…USD` → 201 balanced
