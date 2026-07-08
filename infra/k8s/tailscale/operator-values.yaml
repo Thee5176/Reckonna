@@ -1,0 +1,33 @@
+# Helm values for the Tailscale Kubernetes Operator.
+#   Chart:    tailscale/tailscale-operator  (https://pkgs.tailscale.com/helmcharts)
+#   Install:  helm install tailscale-operator tailscale/tailscale-operator \
+#               --namespace tailscale --create-namespace \
+#               -f infra/k8s/tailscale/operator-values.yaml
+#
+# OAuth client + token are NOT pasted here. They live in Vault at
+# secret/app/tailscale/operator and are rendered into the k8s Secret named
+# 'operator-oauth' by the Vault Agent Injector at install time.
+# The chart reads from existingOAuthSecret when present.
+
+operatorConfig:
+  hostname: "reckonna-k8s-operator"
+  # Chart 1.98.x renders defaultTags directly into the PROXY_TAGS env var;
+  # a YAML list trips: "expected string, got slice". Comma-separate for
+  # multiple tags ("tag:a,tag:b").
+  defaultTags: "tag:k8s-operator"
+
+# Reference an existing k8s Secret rather than embedding any credential here.
+# The named Secret is populated from Vault — see docs/postgres-tailnet.md.
+oauth:
+  existingOAuthSecret: "operator-oauth"  # rendered from vault path secret/app/tailscale/operator
+
+# Proxy-class defaults applied to every exposed Service.
+proxyConfig:
+  image:
+    repository: "tailscale/tailscale"
+  # No public Funnel — tailnet-only. String form per chart 1.98.x schema.
+  defaultTags: "tag:k8s"
+
+# Disable the kube-apiserver-over-tailnet proxy; not needed for Postgres exposure.
+apiServerProxyConfig:
+  mode: "false"

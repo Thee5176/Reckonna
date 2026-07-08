@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: reckonna-app
+# Modern labels form (NOT deprecated commonLabels); includeSelectors keeps labels on
+# Deployment/Service selectors.
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: reckonna
+      app.kubernetes.io/component: web-harness
+    includeSelectors: true
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - configmap-nginx.yaml
+  - deployment.yaml
+  - service.yaml

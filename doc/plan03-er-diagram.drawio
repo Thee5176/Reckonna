@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" agent="reckonna-lead" version="24.0.0">
+  <diagram id="reckonna-er" name="Plan 03 — accounting schema ER">
+    <mxGraphModel dx="1400" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Plan 03 — `accounting` schema (CQRS: command writes · query SELECT-only) · UUIDv7 PKs · greenfield" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="10" width="1100" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- ENTITIES -->
+        <mxCell id="book" value="&lt;b&gt;book&lt;/b&gt; &lt;i&gt;(v1: base only)&lt;/i&gt;&lt;br&gt;🔑 id : uuid&lt;br&gt;• key : text UQ (base)&lt;br&gt;• name : text" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="250" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="journal_entry" value="&lt;b&gt;journal_entry&lt;/b&gt; &lt;i&gt;(header)&lt;/i&gt;&lt;br&gt;🔑 id : uuid (v7)&lt;br&gt;• entry_date : date&lt;br&gt;• description : text&lt;br&gt;• owner_sub : text (Keycloak sub)&lt;br&gt;➜ book_id : uuid → book&lt;br&gt;• version : int (optimistic lock)&lt;br&gt;• created_at / updated_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="185" width="275" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="journal_line" value="&lt;b&gt;journal_line&lt;/b&gt; &lt;i&gt;(detail)&lt;/i&gt;&lt;br&gt;🔑 id : uuid (v7)&lt;br&gt;➜ journal_entry_id → journal_entry ⟨cascade⟩&lt;br&gt;➜ account_id → account&lt;br&gt;• amount : NUMERIC(20,4)&lt;br&gt;• side : ⟨debit | credit⟩&lt;br&gt;• created_at" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="410" width="275" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="account" value="&lt;b&gt;account&lt;/b&gt; &lt;i&gt;(master · doc-driven seed)&lt;/i&gt;&lt;br&gt;🔑 id : uuid (v7)&lt;br&gt;• code : varchar(5) UQ&lt;br&gt;• name : text (English canonical)&lt;br&gt;• type : ⟨asset|liability|equity|income|expense⟩&lt;br&gt;• normal_balance : ⟨debit | credit⟩&lt;br&gt;• postable : bool&lt;br&gt;• current_noncurrent : enum?&lt;br&gt;• status : text&lt;br&gt;• created_at : timestamptz" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="50" width="290" height="205" as="geometry" />
+        </mxCell>
+        <mxCell id="account_required_dimension" value="&lt;b&gt;account_required_dimension&lt;/b&gt; &lt;i&gt;(junction)&lt;/i&gt;&lt;br&gt;🔑➜ account_id → account&lt;br&gt;🔑➜ dimension_type_id → dimension_type" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="300" width="290" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="journal_line_dimension" value="&lt;b&gt;journal_line_dimension&lt;/b&gt; &lt;i&gt;(junction)&lt;/i&gt;&lt;br&gt;🔑➜ journal_line_id → journal_line ⟨cascade⟩&lt;br&gt;🔑➜ dimension_value_id → dimension_value" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="380" y="440" width="290" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="dimension_type" value="&lt;b&gt;dimension_type&lt;/b&gt;&lt;br&gt;🔑 id : uuid&lt;br&gt;• key : text UQ ⟨entity|currency|counterparty⟩&lt;br&gt;• name : text" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="730" y="50" width="290" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="dimension_value" value="&lt;b&gt;dimension_value&lt;/b&gt; &lt;i&gt;(members = data)&lt;/i&gt;&lt;br&gt;🔑 id : uuid&lt;br&gt;➜ dimension_type_id → dimension_type&lt;br&gt;• code : text (JPY, USD, EUR…)&lt;br&gt;• name : text&lt;br&gt;⊡ UQ(dimension_type_id, code)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="730" y="185" width="290" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="idempotency_record" value="&lt;b&gt;idempotency_record&lt;/b&gt; &lt;i&gt;(TTL 24h)&lt;/i&gt;&lt;br&gt;🔑 id : uuid&lt;br&gt;• key : uuid (Idempotency-Key)&lt;br&gt;• owner_sub : text&lt;br&gt;• request_hash : text&lt;br&gt;• response_status : int&lt;br&gt;• response_body : jsonb&lt;br&gt;• created_at&lt;br&gt;⊡ UQ(key, owner_sub)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=4;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="730" y="360" width="290" height="195" as="geometry" />
+        </mxCell>
+
+        <!-- CONSTRAINTS LEGEND -->
+        <mxCell id="constraints" value="&lt;b&gt;Invariants &amp;amp; constraints (enforced across layers)&lt;/b&gt;&lt;br&gt;&lt;br&gt;① 借方=貸方 — deferred CONSTRAINT TRIGGER:&lt;br&gt;&#160;&#160;&#160;Σ(amount | side=debit) = Σ(amount | side=credit)&lt;br&gt;&#160;&#160;&#160;per (journal_entry, book) — [IT3, IT13]&lt;br&gt;&#160;&#160;&#160;ALSO domain NewLedger() check — [S2, AT2]&lt;br&gt;&lt;br&gt;② single-currency (v1): all lines of an entry&lt;br&gt;&#160;&#160;&#160;share one currency dimension_value — [AT13 ok / AT14 mixed→422]&lt;br&gt;&lt;br&gt;③ amount NUMERIC(20,4) exact decimal · no float drift — [AT11]&lt;br&gt;&lt;br&gt;④ version: trigger bumps journal_entry.version on&lt;br&gt;&#160;&#160;&#160;UPDATE → ETag / If-Match — [IT17, AT16/16b]&lt;br&gt;&lt;br&gt;⑤ required dims: line must carry a value for each&lt;br&gt;&#160;&#160;&#160;account_required_dimension type — [IT12 · 21500→counterparty]&lt;br&gt;&lt;br&gt;⑥ UUIDv7 PKs · CQRS compile-time read-purity — [IT9]&lt;br&gt;&lt;br&gt;owner_sub = Keycloak `sub` (external identity · no FK)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="50" width="400" height="365" as="geometry" />
+        </mxCell>
+
+        <!-- RELATIONSHIPS (crow's foot) -->
+        <mxCell id="r1" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="book" target="journal_entry"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r2" value="1 : N (cascade)" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="journal_entry" target="journal_line"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r3" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="account" target="journal_line"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r4" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="journal_line" target="journal_line_dimension"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r5" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="dimension_value" target="journal_line_dimension"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r6" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="dimension_type" target="dimension_value"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r7" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="account" target="account_required_dimension"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="r8" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;html=1;rounded=0;startArrow=ERone;endArrow=ERmany;fontSize=9;" edge="1" parent="1" source="dimension_type" target="account_required_dimension"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

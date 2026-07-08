@@ -38,3 +38,18 @@ V-model applied INTO an agent swarm. Source of truth: Confluence
 - ruflo config keys: disable SPARC autoplan; set worker tier = sonnet
 - ruflo MCP present at runtime (else heads run skills sequentially on opus — no cost split)
 - SonarQube per-SubagentStop cost with a wide swarm
+
+## Validate & resolve a PR (right side of the V)
+
+Skills, run in order — each proves the layer below before the next:
+
+```
+/qa-plan          → lists every acceptance criterion into your todo list
+/validate-at      → validates them one at a time (committed test + clean SonarQube gate), like /ship-at
+/pr-review-dispatch → PR code review, require MERGE
+/pr-resolve       → merge train to develop + release (human-gated)
+```
+
+Each `/validate-at` run leaves a committed, retestable test behind and refuses to mark an AT
+done while the SonarQube quality gate is not `STATUS: OK`. See
+`docs/v-model-right-side-skill-pipeline.md` and `.claude/skills/{qa-plan,validate-at,pr-resolve}/`.

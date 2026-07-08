@@ -10,4 +10,5 @@ paths = [
   '''tests/no-secrets_test\.sh''',        # assembles FAKE secrets at runtime; contains no literal secret
   '''\.devcontainer/post-create\.sh''',   # tool download URLs only, no credentials
   '''locales/.*\.json''',                 # account-name translations
+  '''scripts/test-quality-gate\.sh''',    # curl -u "$SONAR_TOKEN:" — env-var token, no literal secret
 ]

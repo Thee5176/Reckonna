@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2034  # version manifest; vars consumed by the sourcing Dockerfile/setup
 # Pinned toolchain versions — SINGLE SOURCE OF TRUTH.
 # Sourced by .devcontainer/post-create.sh (install) AND scripts/deps-check.sh (validate).
 # Mirror of the "Pinned dependencies" table in plans/00-bootstrap-deps-vault.md. Bump here only.
