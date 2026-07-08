@@ -61,3 +61,20 @@ TDD is the inner loop of the bottom box. The V-model adds vertical traceability:
 verifies a specific design artifact, and the heads pin skills to phases so the agent can't skip
 from requirements straight to code — the hooks and the code-reviewer verdict are the structural
 gates that enforce the climb back up.
+
+## Right side of the V — validation skill pipeline
+
+Verification is driven by four skills in order (bottom-up, each delegates down):
+
+1. `/qa-plan` — read this plan's AT ledger (Section 1) + integration spec (Section 2) and
+   enumerate **every** criterion into the agent todo list (one todo each: what / how / expected /
+   human-gated).
+2. `/validate-at` — the loop: validate each criterion **one at a time** (mirrors `/ship-at`) —
+   QA it, write the AT as a **committed retestable test** (`e2e/AT<k>_*.e2e_test.go`,
+   `components/*.test.tsx`, `tests/AT<k>_*.sh`) with detailed assertions + an invalid case
+   (借方≠貸方 → error), and **close on a clean SonarQube quality gate** before marking it done.
+3. `/pr-review-dispatch` — PR code review → MERGE verdict; a BLOCK creates a new regression AT.
+4. `/pr-resolve` — the merge train (rebase → merge no-squash → combined develop scan → release),
+   only after 1–3 are green. `terraform/kubectl apply` stay human-only.
+
+Full design: `docs/v-model-right-side-skill-pipeline.md`.
