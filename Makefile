@@ -25,9 +25,21 @@ migrate: ## Apply DB migrations (up)
 migrate-down: ## Roll back one migration
 	@migrate -path db/migration -database "$(MIGRATE_DB_URL)" down 1
 
-# Podman hosts: DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock TESTCONTAINERS_RYUK_DISABLED=true make test (ryuk hangs against podman's API otherwise)
+# Test DB source (first match wins):
+#   1. RECKONNA_TEST_DATABASE_URL preset by caller
+#   2. Vault-rendered DSN via scripts/render-test-db-url.sh (shared PG, schema-isolated per test)
+#   3. testcontainers-go (needs Docker/podman socket): DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock TESTCONTAINERS_RYUK_DISABLED=true make test
 test: ## Run all Go tests with race detector
-	@if [ -n "$$(go list ./... 2>/dev/null)" ]; then go test ./... -race; else echo "test: no Go packages yet — skipping (plan 01)"; fi
+	@if [ -z "$$(go list ./... 2>/dev/null)" ]; then echo "test: no Go packages yet — skipping (plan 01)"; exit 0; fi; \
+	if [ -z "$${RECKONNA_TEST_DATABASE_URL:-}" ] && [ -z "$${RECKONNA_TEST_NO_VAULT:-}" ]; then \
+	  if dsn="$$(bash scripts/render-test-db-url.sh 2>/dev/null)"; then \
+	    export RECKONNA_TEST_DATABASE_URL="$$dsn"; \
+	    echo "test: using shared PG from Vault (schema-isolated)"; \
+	  else \
+	    echo "test: Vault DSN unavailable — falling back to testcontainers (needs DOCKER_HOST)"; \
+	  fi; \
+	fi; \
+	go test ./... -race
 
 lint: ## Run golangci-lint
 	@golangci-lint run
