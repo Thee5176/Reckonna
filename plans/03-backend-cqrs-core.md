@@ -251,7 +251,7 @@ Source `Ledgers`→ **JournalEntry** (header: date, description, owner, book=bas
 | AT8  | Given no/invalid JWT / When any non-health endpoint / Then 401                                               | e2e/auth_unauthorized.e2e_test.go        |
 | AT9  | Given seeded CoA / When GET /query/code-of-accounts / Then full chart returned                               | e2e/coa_list.e2e_test.go                 |
 | AT10 | Given POST ledger referencing unknown coa / When submit / Then 422 (FK/validation)                          | e2e/ledger_bad_coa.e2e_test.go           |
-| AT11 | Given decimal amounts (1000.3333 exact-fit, 1000.33335 boundary, 0.12345 sub-cent) / When round-trip create→read / Then NUMERIC(20,4) rounding policy is explicit and stable (no float drift) | e2e/money_precision.e2e_test.go (table-driven, 3 cases) |
+| AT11 | Given decimal amounts (1000.3333 exact-fit, 1000.33335 boundary, 0.12345 sub-cent) / When round-trip create→read / Then NUMERIC(20,4) precision policy is explicit: exact-≤4dp accepted with stable round-trip, finer precision REJECTED 422 (Option B / IT18) — no silent rounding, so the full-precision domain balance check and the 4dp DB trigger never diverge | e2e/acceptance_e2e_test.go TestE2E_MoneyPrecision (table-driven, 3 cases) |
 | AT12 | _Deferred to plan 02 (docs-hardening) — Swagger UI at /docs depends on S18/S19_ | _e2e/docs_served.e2e_test.go (plan 02)_  |
 | AT13 | Given currency dimension / When POST single-currency USD entry (debit 1000 + credit 1000 USD) / Then 201, balanced | e2e/entry_currency_dim.e2e_test.go |
 | AT14 | Given lines with mixed currencies in one entry / When POST / Then 422 + `code:"mixed_currency"` (v1: entry must be single-currency) | e2e/entry_mixed_currency.e2e_test.go |
@@ -552,7 +552,7 @@ Run with Claude Code or Codex; checkbox as you ship.
 - [ ] **T6 (P2, human: ~15min / CC: ~3min)** — `e2e/money_precision.e2e_test.go` — AT11 boundary cases per D8
   - Surfaced by: Test Review — single 1000.3333 case left rounding policy undefined.
   - Files: `e2e/money_precision.e2e_test.go` (table-driven: 1000.3333 + 1000.33335 + 0.12345).
-  - Verify: All three cases pass with explicit, documented NUMERIC(20,4) rounding policy.
+  - Verify: All three cases pass — exact-4dp accepted, both >4dp inputs rejected 422 (Option B / IT18 reject policy; D8 resolved to reject, not round).
 - [ ] **T7 (P1, human: ~1h / CC: ~10min)** — `internal/handler/ledger_query.go` — cursor pagination per D10
   - Surfaced by: Performance Review — unbounded ListLedgers.
   - Files: `internal/handler/ledger_query.go`, `internal/query/ledger_query.go`, `db/query/query/ledger.sql` (cursor predicate on UUIDv7), DTO with `next_cursor`.

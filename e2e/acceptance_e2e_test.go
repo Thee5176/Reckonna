@@ -163,22 +163,31 @@ func TestE2E_Statements(t *testing.T) {
 	})
 }
 
-// AT11 — NUMERIC(20,4) rounding policy is explicit and stable across round-trip.
+// AT11 — NUMERIC(20,4) precision policy (Option B / IT18): amounts that fit
+// exactly in 4dp are accepted and round-trip stably; amounts carrying finer
+// significance are REJECTED with 422 rather than rounded. Rejecting up front
+// keeps the full-precision domain balance check and the 4dp DB CONSTRAINT
+// TRIGGER in agreement — rounding at the boundary could turn a 5dp-balanced
+// entry into a 4dp-unbalanced one, which the 借方=貸方 invariant forbids.
 func TestE2E_MoneyPrecision(t *testing.T) {
 	h := newHarness(t)
 	cases := []struct {
 		input      string
-		wantStored string
+		wantStatus int
+		wantStored string // asserted only when wantStatus == 201
 	}{
-		{"1000.3333", "1000.3333"},  // exact-fit
-		{"1000.33335", "1000.3334"}, // 5th-decimal boundary → round half away from zero
-		{"0.12345", "0.1235"},       // sub-cent → 4 places
+		{"1000.3333", http.StatusCreated, "1000.3333"},     // exact 4dp — accepted, stable round-trip
+		{"1000.33335", http.StatusUnprocessableEntity, ""}, // >4dp — rejected (no silent rounding)
+		{"0.12345", http.StatusUnprocessableEntity, ""},    // sub-cent >4dp — rejected
 	}
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
 			w := h.req(t, http.MethodPost, "/command/journal-entries", "dave",
 				entryJSON(10000, 40000, tc.input, "JPY"), nil)
-			require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+			require.Equal(t, tc.wantStatus, w.Code, w.Body.String())
+			if tc.wantStatus != http.StatusCreated {
+				return // rejected amount — nothing persisted to read back
+			}
 			var created struct {
 				ID string `json:"id"`
 			}
@@ -190,7 +199,7 @@ func TestE2E_MoneyPrecision(t *testing.T) {
 			require.NoError(t, json.Unmarshal(g.Body.Bytes(), &v))
 			require.Len(t, v.Lines, 2)
 			for _, l := range v.Lines {
-				assert.Equalf(t, tc.wantStored, l.Amount, "stable NUMERIC(20,4) rounding for %s", tc.input)
+				assert.Equalf(t, tc.wantStored, l.Amount, "stable NUMERIC(20,4) for %s", tc.input)
 			}
 		})
 	}
