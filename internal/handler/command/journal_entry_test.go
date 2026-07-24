@@ -29,6 +29,12 @@ const unbalancedBody = `{"date":"2025-01-01","description":"bad","lines":[
   {"account_code":10000,"side":"debit","amount":"1000.0000","dimensions":{"currency":"JPY"}},
   {"account_code":40000,"side":"credit","amount":"500.0000","dimensions":{"currency":"JPY"}}]}`
 
+// excessivePrecisionBody is balanced but carries 5dp amounts NUMERIC(20,4)
+// cannot store — rejected up front so the domain and DB agree at 4dp (IT18).
+const excessivePrecisionBody = `{"date":"2025-01-01","description":"toofine","lines":[
+  {"account_code":10000,"side":"debit","amount":"1000.00005","dimensions":{"currency":"JPY"}},
+  {"account_code":40000,"side":"credit","amount":"1000.00005","dimensions":{"currency":"JPY"}}]}`
+
 func newRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -95,6 +101,28 @@ func TestPost_Unbalanced_Problem(t *testing.T) {
 	assert.Equal(t, 0, *p.Errors[0].LineIndex)
 	assert.Equal(t, "amount", p.Errors[0].Field)
 	assert.Equal(t, "debit_credit_mismatch", p.Errors[0].Issue)
+}
+
+// TestPost_ExcessivePrecision_422 asserts a balanced entry whose amounts exceed
+// NUMERIC(20,4) is rejected 422 validation_failed (IT18, Option B) — the domain
+// guard fires before persistence, so the DB never sees a sub-4dp amount.
+func TestPost_ExcessivePrecision_422(t *testing.T) {
+	r, pool := newRouter(t)
+	w := do(t, r, http.MethodPost, "/command/journal-entries", excessivePrecisionBody, nil)
+
+	require.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+	assert.Contains(t, w.Header().Get("Content-Type"), "application/problem+json")
+
+	var p problem.Problem
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &p))
+	assert.Equal(t, "validation_failed", p.Code) // assert on code, not localized text
+	assert.Equal(t, 422, p.Status)
+
+	// No row persisted — rejected before the write.
+	var n int
+	require.NoError(t, pool.QueryRow(context.Background(),
+		"SELECT count(*) FROM journal_entry WHERE owner_sub='ownerA'").Scan(&n))
+	assert.Equal(t, 0, n)
 }
 
 func TestPost_UnknownAccount(t *testing.T) {
