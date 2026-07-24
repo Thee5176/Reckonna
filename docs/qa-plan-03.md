@@ -40,21 +40,21 @@ Agent todo list produced by `/qa-plan`. Enumeration only — **not** validation.
 
 ## Group B — Integration (`make test`)
 
-- [ ] **B1 — IT1** command.Post → query.Get same id · `U internal/query` → same id; sum debit=credit
-- [ ] **B2 — IT2** tx fails mid-write · `U ledger_tx/service` → atomic rollback, no partial rows
-- [ ] **B3 — IT3** DB trigger rejects unbalanced (domain bypassed) · `U internal/repository/balance_trigger_test` → trigger raises, insert refused **[MONEY: unbalanced-ledger rejection]**
-- [ ] **B4 — IT4** OIDC JWKS bad sig/iss/aud/exp · `U middleware/auth_test` (mock JWKS) → each 401
-- [ ] **B5 — IT5** read paths owner-filtered · `U internal/query/readonly_test`+owner → no cross-owner leakage
-- [ ] **B6 — IT7** statement aggregates group by CoA element · `U statement test` → BS/P&L grouped correct
-- [ ] **B7 — IT8** migrate up→down→up idempotent + trigger present · `make migrate`/migrate_test → clean cycle, CHECK trigger exists
-- [ ] **B8 — IT9** cmd/query read-only (compile-time) · `U internal/query/readonly_test` (go/parser walk) → fails if `repository/command` imported
-- [ ] **B9 — IT12** required dimension (counterparty on 21500) · `U dimension_required` → 422
-- [ ] **B10 — IT13** per-(entry,book) balance + mixed-currency reject · `U book_balance` → trigger rejects **[MONEY: unbalanced-ledger rejection]**
-- [ ] **B11 — IT14** every coa code + every error code has en+ja · `U internal/config/i18n_coverage_test` → 100% locale coverage
-- [ ] **B12 — IT15** Content-Type middleware pre-handler; OPTIONS passes · `U content_type_test` → non-JSON POST/PUT blocked early
-- [ ] **B13 — IT16** idempotency UNIQUE(key,owner_sub)+replay+TTL · `U idempotency_test` → cached row, cleanup query works
-- [ ] **B14 — IT17** version trigger bumps on UPDATE → ETag · `U version_trigger_test` → version increments
-- [ ] **B15 — IT18** rounding-divergence: domain ∧ DB trigger agree @4dp · `U rounding_divergence_test` → both reject full-precision-balanced/4dp-unbalanced (& reverse) **[MONEY: unbalanced-ledger rejection]**
+- [x] **B1 — IT1** command.Post → query.Get same id · `U internal/query` → same id; sum debit=credit
+- [x] **B2 — IT2** tx fails mid-write · `U ledger_tx/service` → atomic rollback, no partial rows
+- [x] **B3 — IT3** DB trigger rejects unbalanced (domain bypassed) · `U internal/repository/balance_trigger_test` → trigger raises, insert refused **[MONEY: unbalanced-ledger rejection]**
+- [x] **B4 — IT4** OIDC JWKS bad sig/iss/aud/exp · `U middleware/auth_test` (mock JWKS) → each 401
+- [x] **B5 — IT5** read paths owner-filtered · `U internal/query/readonly_test`+owner → no cross-owner leakage
+- [x] **B6 — IT7** statement aggregates group by CoA element · `U statement test` → BS/P&L grouped correct
+- [x] **B7 — IT8** migrate up→down→up idempotent + trigger present — `migrate_test.go` · `make migrate`/migrate_test → clean cycle, CHECK trigger exists
+- [x] **B8 — IT9** cmd/query read-only (compile-time) · `U internal/query/readonly_test` (go/parser walk) → fails if `repository/command` imported
+- [x] **B9 — IT12** required dimension (counterparty on 21500) · `U dimension_required` → 422
+- [x] **B10 — IT13** per-(entry,book) balance + mixed-currency reject · `U book_balance` → trigger rejects **[MONEY: unbalanced-ledger rejection]**
+- [x] **B11 — IT14** every coa code + every error code has en+ja · `U internal/config/i18n_coverage_test` → 100% locale coverage
+- [x] **B12 — IT15** Content-Type middleware pre-handler; OPTIONS passes · `U content_type_test` → non-JSON POST/PUT blocked early
+- [x] **B13 — IT16** idempotency UNIQUE(key,owner_sub)+replay+TTL · `U idempotency_test` → cached row, cleanup query works
+- [x] **B14 — IT17** version trigger bumps on UPDATE → ETag · `U version_trigger_test` → version increments
+- [x] **B15 — IT18** rounding-divergence: domain ∧ DB trigger agree @4dp — Option B (reject >4dp), `32049ae` · `U rounding_divergence_test` → both reject full-precision-balanced/4dp-unbalanced (& reverse) **[MONEY: unbalanced-ledger rejection]**
 
 ## Group C — LIVE server + DB (gap items — added per request)
 

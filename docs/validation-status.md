@@ -25,6 +25,18 @@ podman testcontainers, DB balance trigger exercised). The SonarQube gate STATUS 
 81.3%; the coverage debt is in handler/query. A full `sonar-scanner` rescan was deferred (CE
 overwrites the single project; would clobber develop/FE scan state) — run it once at merge time.
 
+## Integration (B-series / IT) — validated 2026-07-24
+
+| IT | criterion | result | evidence |
+|----|-----------|--------|----------|
+| IT1–5,7,9,12–17 | CQRS write→read, tx rollback, DB trigger, OIDC, owner-scope, statements, read-only purity, required-dim, content-type, idempotency, version | PASS | `go test ./internal/...` green (podman PG) |
+| IT8 | migration up→down→up idempotent + balance trigger present | PASS (new) | `internal/testsupport/migrate_test.go` (`0f8d196`) |
+| IT18 | rounding-divergence — domain ∧ DB trigger agree at NUMERIC(20,4) | PASS (new) | Option B (human-approved): reject >4dp via `ErrExcessivePrecision`; `32049ae` |
+
+Gap closures this session — both mandated by plan "Done" but had no committed test:
+- **IT18 (money):** domain checked balance at full precision while the DB trigger compares at 4dp → an entry balanced at full precision but unbalanced after 4dp rounding was accepted by the domain, rejected by the trigger. Option B rejects >4dp amounts up front (422 `validation_failed`) so both layers agree.
+- **IT8:** no down-migration path was tested; added up→down→up idempotency + trigger-presence check.
+
 ## Env
 - Test DB: podman testcontainers (`~/.testcontainers.properties` → rootless podman sock,
   `ryuk.disabled=true`) OR Vault shared-PG DSN via `scripts/render-test-db-url.sh` (auto by `make test`).
