@@ -112,6 +112,78 @@ func TestNewEntry_BalanceInvariant(t *testing.T) {
 	}
 }
 
+// TestNewEntry_ExcessivePrecision asserts Option B (plan IT18): a line amount
+// carrying significance finer than the persistence policy NUMERIC(20,4) is
+// rejected up front, so the full-precision domain balance check can never
+// accept an entry that the 4dp DB CONSTRAINT TRIGGER would reject. Closes the
+// domain↔DB rounding-divergence gap: the two layers agree at 4dp because no
+// sub-4dp amount is ever admitted.
+func TestNewEntry_ExcessivePrecision(t *testing.T) {
+	cash := acct(10000, domain.NormalDebit)
+	revenue := acct(40000, domain.NormalCredit)
+	receivable := acct(11000, domain.NormalDebit)
+
+	tests := []struct {
+		name    string
+		lines   []domain.JournalLine
+		wantErr error
+	}{
+		{
+			// 5dp amount: NUMERIC(20,4) would round it on INSERT — reject.
+			name: "sub-4dp amount rejected",
+			lines: []domain.JournalLine{
+				{Account: cash, Side: domain.SideDebit, Amount: money("0.12345"), Dimensions: dims("JPY")},
+				{Account: revenue, Side: domain.SideCredit, Amount: money("0.12345"), Dimensions: dims("JPY")},
+			},
+			wantErr: domain.ErrExcessivePrecision,
+		},
+		{
+			// The divergence case: balanced at full precision
+			// (0.24685 == 0.12344 + 0.12341) but each amount rounds to 4dp
+			// differently, so the DB trigger would reject it. The precision guard
+			// fires first — the domain never accepts what the DB would reject.
+			name: "full-precision-balanced but 4dp-divergent rejected",
+			lines: []domain.JournalLine{
+				{Account: cash, Side: domain.SideDebit, Amount: money("0.12344"), Dimensions: dims("JPY")},
+				{Account: receivable, Side: domain.SideDebit, Amount: money("0.12341"), Dimensions: dims("JPY")},
+				{Account: revenue, Side: domain.SideCredit, Amount: money("0.24685"), Dimensions: dims("JPY")},
+			},
+			wantErr: domain.ErrExcessivePrecision,
+		},
+		{
+			// Exactly 4dp is the persistence policy — accepted.
+			name: "exact 4dp accepted",
+			lines: []domain.JournalLine{
+				{Account: cash, Side: domain.SideDebit, Amount: money("1000.3333"), Dimensions: dims("JPY")},
+				{Account: revenue, Side: domain.SideCredit, Amount: money("1000.3333"), Dimensions: dims("JPY")},
+			},
+			wantErr: nil,
+		},
+		{
+			// Trailing zeros beyond 4dp carry no significance — accepted.
+			name: "trailing zeros beyond 4dp accepted",
+			lines: []domain.JournalLine{
+				{Account: cash, Side: domain.SideDebit, Amount: money("100.30000"), Dimensions: dims("JPY")},
+				{Account: revenue, Side: domain.SideCredit, Amount: money("100.30000"), Dimensions: dims("JPY")},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry, err := domain.NewEntry(uuid.New(), time.Now(), "test", "owner-sub", domain.BookBase, tt.lines)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				assert.Nil(t, entry)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, entry)
+		})
+	}
+}
+
 // TestNewEntry_MixedCurrency asserts a v1 entry must be single-currency: lines
 // that disagree on their currency dimension are rejected. (AT14)
 func TestNewEntry_MixedCurrency(t *testing.T) {

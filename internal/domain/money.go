@@ -39,3 +39,10 @@ func (m Money) IsZero() bool { return m.amount.IsZero() }
 
 // String renders the exact decimal representation.
 func (m Money) String() string { return m.amount.String() }
+
+// TooPrecise reports whether the amount carries significance finer than the
+// persistence policy NUMERIC(20,4) — i.e. rounding to 4 decimal places would
+// change its value. The command layer rejects such amounts so the full-precision
+// domain balance check and the 4dp DB trigger always agree (plan IT18, Option B).
+// Trailing zeros beyond 4dp carry no significance and are accepted.
+func (m Money) TooPrecise() bool { return !m.amount.Equal(m.amount.Round(4)) }

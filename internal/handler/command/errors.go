@@ -40,7 +40,8 @@ func writeError(pw *problem.Writer, c *gin.Context, err error) {
 
 	case errors.Is(err, command.ErrUnknownDimension) ||
 		errors.Is(err, service.ErrBookNotFound) ||
-		errors.Is(err, domain.ErrNoLines):
+		errors.Is(err, domain.ErrNoLines) ||
+		errors.Is(err, domain.ErrExcessivePrecision):
 		pw.Write(c, http.StatusUnprocessableEntity, "validation_failed", nil, nil)
 
 	case errors.Is(err, service.ErrEntryNotFound):

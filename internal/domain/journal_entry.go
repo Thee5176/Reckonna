@@ -36,6 +36,12 @@ var (
 	ErrRequiredDimension = errors.New("domain: line missing a required dimension")
 	// ErrNoLines is returned when an entry has no postings.
 	ErrNoLines = errors.New("domain: entry has no lines")
+	// ErrExcessivePrecision is returned when a line amount carries significance
+	// finer than the persistence policy NUMERIC(20,4). The DB would round it on
+	// INSERT, so the command rejects it up front (422 validation_failed) to keep
+	// the full-precision domain balance check and the 4dp DB trigger in
+	// agreement (plan IT18, Option B).
+	ErrExcessivePrecision = errors.New("domain: amount exceeds 4dp precision (NUMERIC(20,4))")
 )
 
 // JournalLine is one posting: an Amount on a Side, against an Account, carrying
@@ -76,6 +82,12 @@ func NewEntry(id uuid.UUID, date time.Time, description, owner, book string, lin
 	}
 
 	for _, l := range lines {
+		// Reject amounts finer than NUMERIC(20,4) before the balance check, so
+		// the full-precision domain sum can never accept an entry the 4dp DB
+		// trigger would reject (IT18, Option B).
+		if l.Amount.TooPrecise() {
+			return nil, ErrExcessivePrecision
+		}
 		for _, req := range l.Account.RequiredDimensions {
 			if v, ok := l.Dimensions[req]; !ok || v == "" {
 				return nil, ErrRequiredDimension
