@@ -80,39 +80,14 @@ func NewEntry(id uuid.UUID, date time.Time, description, owner, book string, lin
 	if len(lines) == 0 {
 		return nil, ErrNoLines
 	}
-
-	for _, l := range lines {
-		// Reject amounts finer than NUMERIC(20,4) before the balance check, so
-		// the full-precision domain sum can never accept an entry the 4dp DB
-		// trigger would reject (IT18, Option B).
-		if l.Amount.TooPrecise() {
-			return nil, ErrExcessivePrecision
-		}
-		for _, req := range l.Account.RequiredDimensions {
-			if v, ok := l.Dimensions[req]; !ok || v == "" {
-				return nil, ErrRequiredDimension
-			}
-		}
+	if err := validateLines(lines); err != nil {
+		return nil, err
 	}
-
-	currency := lines[0].Currency()
-	for _, l := range lines {
-		if l.Currency() != currency {
-			return nil, ErrMixedCurrency
-		}
+	if err := requireSingleCurrency(lines); err != nil {
+		return nil, err
 	}
-
-	var debit, credit Money
-	for _, l := range lines {
-		switch l.Side {
-		case SideDebit:
-			debit = debit.Add(l.Amount)
-		case SideCredit:
-			credit = credit.Add(l.Amount)
-		}
-	}
-	if !debit.Equal(credit) {
-		return nil, ErrUnbalanced
+	if err := requireBalanced(lines); err != nil {
+		return nil, err
 	}
 
 	return &JournalEntry{
@@ -123,4 +98,50 @@ func NewEntry(id uuid.UUID, date time.Time, description, owner, book string, lin
 		Book:        book,
 		Lines:       lines,
 	}, nil
+}
+
+// validateLines rejects amounts finer than NUMERIC(20,4) before the balance
+// check — so the full-precision domain sum can never accept an entry the 4dp DB
+// trigger would reject (IT18, Option B) — and rejects any line missing a
+// required dimension.
+func validateLines(lines []JournalLine) error {
+	for _, l := range lines {
+		if l.Amount.TooPrecise() {
+			return ErrExcessivePrecision
+		}
+		for _, req := range l.Account.RequiredDimensions {
+			if v, ok := l.Dimensions[req]; !ok || v == "" {
+				return ErrRequiredDimension
+			}
+		}
+	}
+	return nil
+}
+
+// requireSingleCurrency rejects an entry whose lines mix currencies.
+func requireSingleCurrency(lines []JournalLine) error {
+	currency := lines[0].Currency()
+	for _, l := range lines {
+		if l.Currency() != currency {
+			return ErrMixedCurrency
+		}
+	}
+	return nil
+}
+
+// requireBalanced enforces 借方=貸方: Σ debit == Σ credit across the lines.
+func requireBalanced(lines []JournalLine) error {
+	var debit, credit Money
+	for _, l := range lines {
+		switch l.Side {
+		case SideDebit:
+			debit = debit.Add(l.Amount)
+		case SideCredit:
+			credit = credit.Add(l.Amount)
+		}
+	}
+	if !debit.Equal(credit) {
+		return ErrUnbalanced
+	}
+	return nil
 }
