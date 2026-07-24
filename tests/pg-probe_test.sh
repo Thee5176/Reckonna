@@ -11,7 +11,9 @@ TMP="$(mktemp -d)"
 LISTENER_PORT=55432
 
 cleanup() {
-  [[ -n "${LISTENER_PID:-}" ]] && kill "$LISTENER_PID" 2>/dev/null || true
+  if [[ -n "${LISTENER_PID:-}" ]]; then
+    kill "$LISTENER_PID" 2>/dev/null || true
+  fi
   rm -rf "$TMP"
 }
 trap cleanup EXIT

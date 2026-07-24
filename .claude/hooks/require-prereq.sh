@@ -3,7 +3,7 @@
 set -uo pipefail
 INPUT=$(cat); FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 [ "${CLAUDE_BOOTSTRAP:-0}" = "1" ] && exit 0
-FEATURE="${CLAUDE_FEATURE:-$(ls plans/*.md 2>/dev/null | grep -v impl | head -1 | xargs -r basename | sed 's/.md$//')}"
+FEATURE="${CLAUDE_FEATURE:-$(for f in plans/*.md; do [ -e "$f" ] || continue; case "$f" in *impl*) continue ;; esac; basename "$f" .md; break; done)}"
 [ -z "$FEATURE" ] && exit 0
 PLAN="plans/$FEATURE.md"; DESIGN="design/$FEATURE.design-system.html"
 case "$FILE" in

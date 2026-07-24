@@ -17,6 +17,9 @@ go.work.sum
 .env
 .env.*
 *.tfvars
+*.tfstate
+*.tfstate.*
+*.tfplan
 secrets/
 
 # --- Dependencies / build ---
@@ -25,9 +28,21 @@ node_modules/
 coverage/
 coverage.out
 
+# --- Terraform state/plan (never commit — may carry secrets) ---
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# --- Sonar scanner working dir ---
+.scannerwork/
+
 # --- Tooling / generated ---
 graphify-out/
 .claude-flow/
 .claude/worktrees/
 .gstack/
 .scannerwork/
+
+# QG fixture artifacts
+tests/qualitygate/*/coverage.out
+tests/qualitygate/*/.scannerwork/

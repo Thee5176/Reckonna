@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloudflared
+spec:
+  # P1: keep >=1 cloudflared up during a node drain / rollout so the tunnel never fully drops
+  # (pairs with 2 replicas + anti-affinity for AT4's <=60s recovery).
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
