@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Namespace `observability` is owned by the live homelab stack (kube-prometheus-stack +
+# shared otel-collector), NOT this repo — no Namespace resource declared here (mirrors
+# the postgres kustomization's Terraform-ownership pattern). Self-contained: bases only
+# the PodMonitor; the shared otel-collector Service/Deployment/ConfigMap are never
+# referenced or patched (D1, R1, IT5).
+resources:
+  - podmonitor-reckonna-collector.yaml

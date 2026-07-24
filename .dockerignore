@@ -1,0 +1,14 @@
+# Keep the build context lean and free of non-backend / sensitive material.
+.git
+.github
+.claude
+.devcontainer
+node_modules
+app
+components
+design
+docs
+plans
+infra
+tests
+*.md

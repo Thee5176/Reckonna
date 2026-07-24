@@ -1,0 +1,17 @@
+{
+  "_meta": { "locale": "ja", "keyed_by": "error.code", "source": "plan 03 error-code registry" },
+  "errors": {
+    "unbalanced_entry":            { "title": "貸借が一致しない仕訳",          "detail": "借方の合計と貸方の合計が一致しません。" },
+    "mixed_currency":              { "title": "単一仕訳内の通貨の混在",        "detail": "v1では仕訳は単一通貨で入力する必要があります。" },
+    "missing_required_dimension":  { "title": "必須ディメンションの欠落",      "detail": "勘定科目が必須とするディメンションが明細に設定されていません。" },
+    "unknown_account_code":        { "title": "不明な勘定科目コード",          "detail": "存在しない勘定科目コードが明細で参照されています。" },
+    "invalid_cursor":              { "title": "無効なカーソル",                "detail": "ページングのカーソルが不正または期限切れです。" },
+    "concurrency_conflict":        { "title": "競合が発生しました",            "detail": "他の操作により仕訳が更新されました。再読み込みしてください。" },
+    "duplicate_idempotency_key":   { "title": "重複した冪等キー",              "detail": "この Idempotency-Key は異なる本文で既に使用されています。" },
+    "unsupported_media_type":      { "title": "サポートされていないメディアタイプ", "detail": "Content-Type は application/json である必要があります。" },
+    "unauthorized":                { "title": "認証が必要です",                "detail": "有効なベアラートークンが必要です。" },
+    "forbidden":                   { "title": "アクセスが禁止されています",    "detail": "このリソースを操作する権限がありません。" },
+    "not_found":                   { "title": "見つかりません",                "detail": "要求されたリソースは存在しません。" },
+    "validation_failed":           { "title": "検証に失敗しました",            "detail": "リクエストが構文的または意味的に不正です。" }
+  }
+}

@@ -1,41 +1,233 @@
 # Chart of Accounts — canonical master (v1)
 # GENERATED to conform to doc/coa-governance-standard.md (THE standard). 5-digit gapped codes per §4;
-# framework-neutral names per §5; attributes per §6. English name is canonical; display names per
-# locale in locales/<lang>.json keyed by code. Currency is a DIMENSION (P2), NOT on the account.
-# Seed comes from the standard's Appendix starter ranges. Extend within §4 ranges, leaving gaps.
+# framework-neutral names per §5; §6 attributes complete (description, ifrs_line_item, allowed_books,
+# owner, status). English name is canonical; display names per locale in locales/<lang>.json keyed by
+# code. Currency is a DIMENSION (P2), NOT on the account.
+# scripts/gen-coa validates this file vs the standard and emits db/migration/003_seed_account.*.sql.
 version: 1
 generated_from: doc/coa-governance-standard.md
+owner_default: COA Steward
 accounts:
   # ── Current assets (10000–13999) · Debit ──
-  - { code: 10000, name: "Cash and cash equivalents",   type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
-  - { code: 11000, name: "Trade and other receivables", type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
-  - { code: 12000, name: "Prepayments",                 type: asset,     normal_balance: debit,  current_noncurrent: current,     postable: true, status: active }
+  - code: 10000
+    name: "Cash and cash equivalents"
+    description: "Cash on hand and demand deposits; excludes restricted or term deposits."
+    type: asset
+    normal_balance: debit
+    current_noncurrent: current
+    ifrs_line_item: "Cash and cash equivalents"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 11000
+    name: "Trade and other receivables"
+    description: "Amounts owed by customers and other short-term receivables."
+    type: asset
+    normal_balance: debit
+    current_noncurrent: current
+    ifrs_line_item: "Trade and other receivables"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 12000
+    name: "Prepayments"
+    description: "Payments made in advance for goods or services not yet received."
+    type: asset
+    normal_balance: debit
+    current_noncurrent: current
+    ifrs_line_item: "Prepayments"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Non-current assets (14000–19999) · Debit ──
-  - { code: 14000, name: "Property, plant and equipment", type: asset,   normal_balance: debit,  current_noncurrent: non_current, postable: true, status: active }
-  - { code: 14500, name: "Intangible assets",           type: asset,     normal_balance: debit,  current_noncurrent: non_current, postable: true, status: active }
+  - code: 14000
+    name: "Property, plant and equipment"
+    description: "Tangible assets held for use over more than one period, net of depreciation."
+    type: asset
+    normal_balance: debit
+    current_noncurrent: non_current
+    ifrs_line_item: "Property, plant and equipment"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 14500
+    name: "Intangible assets"
+    description: "Identifiable non-monetary assets without physical substance, net of amortisation."
+    type: asset
+    normal_balance: debit
+    current_noncurrent: non_current
+    ifrs_line_item: "Intangible assets"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Current liabilities (20000–23999) · Credit ──
-  - { code: 20000, name: "Trade and other payables",    type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active }
-  - { code: 21000, name: "Accrued expenses",            type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active }
-  - { code: 21500, name: "Customer escrow payable",     type: liability, normal_balance: credit, current_noncurrent: current,     postable: true, status: active, required_dimensions: [counterparty] }
+  - code: 20000
+    name: "Trade and other payables"
+    description: "Amounts owed to suppliers and other short-term payables."
+    type: liability
+    normal_balance: credit
+    current_noncurrent: current
+    ifrs_line_item: "Trade and other payables"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 21000
+    name: "Accrued expenses"
+    description: "Expenses incurred but not yet invoiced or paid at period end."
+    type: liability
+    normal_balance: credit
+    current_noncurrent: current
+    ifrs_line_item: "Trade and other payables"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 21500
+    name: "Customer escrow payable"
+    description: "Buyer funds held in escrow before release to the seller; a liability to the customer."
+    type: liability
+    normal_balance: credit
+    current_noncurrent: current
+    ifrs_line_item: "Other payables"
+    allowed_books: [base]
+    required_dimensions: [counterparty]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Non-current liabilities (24000–29999) · Credit ──
-  - { code: 24000, name: "Lease liabilities",           type: liability, normal_balance: credit, current_noncurrent: non_current, postable: true, status: active }
+  - code: 24000
+    name: "Lease liabilities"
+    description: "Obligations under lease contracts due beyond one year."
+    type: liability
+    normal_balance: credit
+    current_noncurrent: non_current
+    ifrs_line_item: "Lease liabilities"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Equity (30000–39999) · Credit ──
-  - { code: 30000, name: "Contributed capital",         type: equity,    normal_balance: credit, postable: true, status: active }
-  - { code: 31000, name: "Retained earnings",           type: equity,    normal_balance: credit, postable: true, status: active }
+  - code: 30000
+    name: "Contributed capital"
+    description: "Capital contributed by owners in exchange for equity."
+    type: equity
+    normal_balance: credit
+    ifrs_line_item: "Issued capital"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 31000
+    name: "Retained earnings"
+    description: "Cumulative net income retained rather than distributed."
+    type: equity
+    normal_balance: credit
+    ifrs_line_item: "Retained earnings"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Income / revenue (40000–49999) · Credit ──
-  - { code: 40000, name: "Service / fee revenue",       type: income,    normal_balance: credit, postable: true, status: active }
+  - code: 40000
+    name: "Service / fee revenue"
+    description: "Revenue earned from rendering services or charging fees."
+    type: income
+    normal_balance: credit
+    ifrs_line_item: "Revenue"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Cost of sales (50000–59999) · Debit ──
-  - { code: 50000, name: "Cost of services",            type: expense,   normal_balance: debit,  postable: true, status: active }
+  - code: 50000
+    name: "Cost of services"
+    description: "Costs directly attributable to delivering services."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Cost of sales"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Operating expenses (60000–69999) · Debit ──
-  - { code: 60000, name: "Staff costs",                 type: expense,   normal_balance: debit,  postable: true, status: active }
-  - { code: 61000, name: "Marketing and advertising",   type: expense,   normal_balance: debit,  postable: true, status: active }
-  - { code: 62000, name: "General and administrative",  type: expense,   normal_balance: debit,  postable: true, status: active }
-  - { code: 63000, name: "Depreciation and amortisation", type: expense, normal_balance: debit,  postable: true, status: active }
+  - code: 60000
+    name: "Staff costs"
+    description: "Wages, salaries, and related employee benefit expenses."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Employee benefits expense"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 61000
+    name: "Marketing and advertising"
+    description: "Costs of promoting the business and its services."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Other expenses"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 62000
+    name: "General and administrative"
+    description: "Overhead and administrative costs not tied to service delivery."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Other expenses"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 63000
+    name: "Depreciation and amortisation"
+    description: "Systematic allocation of the cost of long-lived assets over their useful lives."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Depreciation and amortisation expense"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Other income & finance items (70000–79999) ──
-  - { code: 70000, name: "Finance income",              type: income,    normal_balance: credit, postable: true, status: active }
-  - { code: 71000, name: "Finance costs",               type: expense,   normal_balance: debit,  postable: true, status: active }
+  - code: 70000
+    name: "Finance income"
+    description: "Interest and other income earned on financial assets."
+    type: income
+    normal_balance: credit
+    ifrs_line_item: "Finance income"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
+  - code: 71000
+    name: "Finance costs"
+    description: "Interest and other costs incurred on financial liabilities."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Finance costs"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
   # ── Income tax (80000–89999) ──
-  - { code: 80000, name: "Income tax expense",          type: expense,   normal_balance: debit,  postable: true, status: active }
+  - code: 80000
+    name: "Income tax expense"
+    description: "Current and deferred income tax charged for the period."
+    type: expense
+    normal_balance: debit
+    ifrs_line_item: "Income tax expense"
+    allowed_books: [base]
+    postable: true
+    status: active
+    owner: COA Steward
 
 # Dimensions are defined separately (not on accounts). v1 dimension types: entity, currency, counterparty.
-# See doc/coa-governance-standard.md §7 and config/dimensions.yaml (plan 01).
+# See doc/coa-governance-standard.md §7; seeded by db/migration/004_seed_dimensions.up.sql (plan 03 S5c).

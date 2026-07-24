@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: "1.23"
+  GO_VERSION: "1.25"
   NODE_VERSION: "20"
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
         run: go test ./... -race
       - if: steps.detect.outputs.has_go == 'true'
         uses: golangci/golangci-lint-action@v6
-        with: { version: v1.62.2 }
+        with: { version: v1.64.8 }
 
   frontend:
     name: Jest
@@ -60,6 +60,39 @@ jobs:
           else echo "has_e2e=false" >> "$GITHUB_OUTPUT"; echo "No e2e packages yet — skipping"; fi
       - if: steps.detect.outputs.has_e2e == 'true'
         run: go test -tags e2e ./e2e/... -count=1
+
+  image:
+    name: Build service images (push on main)
+    runs-on: ubuntu-latest
+    needs: [backend]
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [command, query]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - id: repo
+        # Lowercase the owner/repo for a valid ghcr image name (trusted context only).
+        run: echo "name=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Log in to ghcr.io
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build (and push on main) ${{ matrix.service }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/Dockerfile.${{ matrix.service }}
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.service }}:${{ github.sha }}
 
   terraform:
     name: Terraform validate

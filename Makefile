@@ -5,7 +5,8 @@ COMPOSE ?= docker compose
 MIGRATE_DB_URL ?= $(DATABASE_URL)   # rendered from Vault (vault agent / direnv) — never hardcoded
 
 .PHONY: help tools-verify generate migrate migrate-down test lint build up down docs docs-verify gen-coa ci \
-        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe tunnel-health tunnel-dns-check tunnel-info
+        k8s-validate tf-validate pg-endpoint tailnet-smoke pg-probe tunnel-health tunnel-dns-check tunnel-info \
+        otel-health otel-metrics-smoke
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -88,3 +89,9 @@ tunnel-info: ## Print tunnel wiring + live cloudflared pod status (read-only)
 
 pg-probe: ## App-side connectivity probe (DNS->TCP->query). Reads libpq PG* env vars.
 	@bash scripts/pg-probe.sh
+
+otel-health: ## Curl the otel-collector health endpoint (:13133)
+	@bash scripts/otel-health.sh
+
+otel-metrics-smoke: ## Assert reckonna_* metrics on the collector + Prometheus target UP
+	@bash scripts/otel-metrics-smoke.sh
