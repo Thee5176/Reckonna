@@ -2,10 +2,11 @@
 # distroless image. Locales are shipped for the i18n error bundle.
 FROM docker.io/library/golang:1.23-alpine AS build
 WORKDIR /src
-COPY go.mod go.sum ./
+# Repo has no go.sum; -mod=mod lets the build generate it in-container.
+COPY go.mod ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/query ./cmd/query
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -trimpath -ldflags="-s -w" -o /out/query ./cmd/query
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/query /query

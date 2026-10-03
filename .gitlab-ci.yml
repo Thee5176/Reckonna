@@ -26,6 +26,7 @@ workflow:
 
 include:
   - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
 
 stages:
   - test      # native SAST, advisory — findings land in the Security Dashboard
@@ -38,6 +39,12 @@ sast:
   tags: [homelab]
   allow_failure: true   # advisory mode — a red analyzer never blocks delivery
 
+# Secret Detection override: same reason — the template job is untagged and
+# would never be claimed by the homelab-tagged runner.
+secret_detection:
+  stage: test
+  tags: [homelab]
+
 variables:
   # Registry decision (docs/gitlab-pipeline.md): GitLab built-in
   # container registry. Package jobs authenticate with $CI_JOB_TOKEN —
@@ -48,6 +55,9 @@ variables:
   FRONTEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/frontend"
   # Mirror keeps full history; SHA is the deploy contract with GitHub CI.
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  # buildah under the docker executor has no /dev/fuse for overlay mounts;
+  # vfs storage avoids fuse entirely (chroot-based, slower but correct).
+  STORAGE_DRIVER: "vfs"
 
 # -----------------------------------------------------------------------------
 # BACKEND — Go 1.23, two services: cmd/command + cmd/query
@@ -58,6 +68,11 @@ package:backend:
   stage: package
   tags: [homelab]
   image: quay.io/buildah/stable
+  # Backend Go code isn't on this branch yet (cmd/command + cmd/query are
+  # empty; code lives in the backend-03 worktree). Skip the job until it
+  # lands — the pipeline stays green instead of building nothing.
+  rules:
+    - exists: [cmd/command/main.go, cmd/query/main.go]
   script:
     # Registry auth is automatic: CI_JOB_TOKEN is accepted by the project's
     # own container registry — job-scoped, no extra CI/CD variables.
