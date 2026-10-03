@@ -55,19 +55,18 @@ variables:
   FRONTEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/frontend"
   # Mirror keeps full history; SHA is the deploy contract with GitHub CI.
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
-  # buildah under the docker executor has no /dev/fuse for overlay mounts;
-  # vfs storage avoids fuse entirely (chroot-based, slower but correct).
-  STORAGE_DRIVER: "vfs"
 
 # -----------------------------------------------------------------------------
 # BACKEND — Go 1.23, two services: cmd/command + cmd/query
-# Build strategy (docs/gitlab-pipeline.md): buildah — rootless, no daemon,
-# natural fit for the homelab runner.
+# Build strategy (docs/gitlab-pipeline.md): kaniko — purpose-built for
+# building images inside a CI container. No daemon, no privileged mode, no
+# user namespaces (buildah needs unshare(CLONE_NEWUSER), which the docker
+# executor blocks).
 # -----------------------------------------------------------------------------
 package:backend:
   stage: package
   tags: [homelab]
-  image: quay.io/buildah/stable
+  image: gcr.io/kaniko-project/executor:debug
   # Backend Go code isn't on this branch yet (cmd/command + cmd/query are
   # empty; code lives in the backend-03 worktree). Skip the job until it
   # lands — the pipeline stays green instead of building nothing.
@@ -77,12 +76,17 @@ package:backend:
     # Registry auth is automatic: CI_JOB_TOKEN is accepted by the project's
     # own container registry — job-scoped, no extra CI/CD variables.
     - |
-      buildah login -u "$CI_REGISTRY_USER" \
-        --password "$CI_JOB_TOKEN" "$CI_REGISTRY"
-    - buildah build -t "$COMMAND_IMAGE:$IMAGE_TAG" -f build/Dockerfile.command .
-    - buildah build -t "$QUERY_IMAGE:$IMAGE_TAG" -f build/Dockerfile.query .
-    - buildah push "$COMMAND_IMAGE:$IMAGE_TAG"
-    - buildah push "$QUERY_IMAGE:$IMAGE_TAG"
+      cat > /kaniko/.docker/config.json <<EOF
+      {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_JOB_TOKEN"}}}
+      EOF
+    - |
+      /kaniko/executor --context . \
+        --dockerfile build/Dockerfile.command \
+        --destination "$COMMAND_IMAGE:$IMAGE_TAG"
+    - |
+      /kaniko/executor --context . \
+        --dockerfile build/Dockerfile.query \
+        --destination "$QUERY_IMAGE:$IMAGE_TAG"
 
 deploy:backend:
   stage: deploy
@@ -124,15 +128,17 @@ package:frontend-export:
 package:frontend-image:
   stage: package
   tags: [homelab]
-  image: quay.io/buildah/stable
+  image: gcr.io/kaniko-project/executor:debug
   needs: ["package:frontend-export"]
   script:
     - |
-      buildah login -u "$CI_REGISTRY_USER" \
-        --password "$CI_JOB_TOKEN" "$CI_REGISTRY"
+      cat > /kaniko/.docker/config.json <<EOF
+      {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_JOB_TOKEN"}}}
+      EOF
     - |
-      buildah build \
-        -t "$FRONTEND_IMAGE:$IMAGE_TAG" -f build/Dockerfile.frontend .
+      /kaniko/executor --context . \
+        --dockerfile build/Dockerfile.frontend \
+        --destination "$FRONTEND_IMAGE:$IMAGE_TAG"
     - buildah push "$FRONTEND_IMAGE:$IMAGE_TAG"
 
 deploy:frontend:
