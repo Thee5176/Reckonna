@@ -2,29 +2,57 @@
 
 ## Why
 
-The hybrid CI/CD split puts all CI (tests, lint, SonarQube, gitleaks) on GitHub Actions and CD (package + deploy) on GitLab. The GitLab pipeline has no static-analysis coverage of its own, and every GitLab-side secret need (kubeconfig, registry creds) was designed around Vault — which is currently down. GitLab's native SAST needs zero secrets and runs where the deploy happens, so it takes over the analysis role for the GitLab side, while GitLab CI/CD variables (masked + protected) provide a Vault-free secret path.
+The hybrid split (CI on GitHub Actions, CD on GitLab) validates every commit
+twice — once on GitHub, once mirrored to GitLab — for the same artifact. It
+also carries two platform taxonomies of secrets, runners, and rules. The
+homelab decommission removed the self-hosted runner, Vault, and SonarQube that
+GitHub CI depended on (`sonar`, `sonar-gate` are already unrunnable), so the
+GitHub side no longer delivers its original gate value. Consolidation: retire
+`.github/workflows/ci.yml` entirely, run CI + CD + SAST in one GitLab pipeline,
+and replace the GitHub→GitLab push mirror with a gitlab.com pull mirror (Free).
 
 ## What Changes
 
-- **`.gitlab-ci.yml`**: add a `test` stage with GitLab native SAST (via the `Security/SAST.gitlab-ci.yml` template) that runs on every `main` mirror push before `package`. SAST findings are uploaded as job artifacts (`reports: sast`) and surface in GitLab's security dashboard. Analyzer coverage targets Go backend, TypeScript/JS frontend, and k8s manifests (kubesec).
-- **`.gitlab-ci.yml`**: replace all Vault-based secret sourcing with GitLab CI/CD variables — masked + protected project variables, file-type variable for kubeconfig. Registry auth needs no variables at all: package jobs publish to the GitLab-native container registry (`$CI_REGISTRY`) with `CI_JOB_TOKEN`. No secrets in the repo file. The deviation from the Vault-only rule is recorded in `docs/hybrid-ci-github-cd-gitlab.md`; `.claude/rules/secrets-vault.md` itself is not amended.
-- **`.github/workflows/ci.yml`**: unchanged. The `sonar` + `sonar-gate` jobs stay as-is (PR-time analysis on GitHub remains SonarQube).
-- **`docs/hybrid-ci-github-cd-gitlab.md`**: update to describe the SAST stage and the Vault-deviation decision.
+- **`.gitlab-ci.yml`**: grows from CD-only to the single pipeline — the 7 CI
+  jobs from `ci.yml` migrate per the job map in design D7 (backend, frontend,
+  e2e, terraform, infra-manifests, gitleaks→native Secret Detection, sonar
+  dropped). Stages become `test → package → deploy`. `workflow.rules` admits
+  `main` pushes AND merge-request pipelines. Caching (Go modules, npm) becomes
+  a hard requirement under the 400-minute free CI pool.
+- **`.github/workflows/ci.yml`**: deleted. The `mirror-gitlab` push job never
+  lands; gitlab.com pull mirror replaces it and the `GITLAB_MIRROR_TOKEN`
+  secret disappears.
+- **GitLab project settings**: pull mirror (GitHub → gitlab.com), branch
+  protection on `main` with green pipeline as merge condition, CI/CD variables
+  unchanged (`KUBECONFIG` file-type only).
+- **`docs/hybrid-ci-github-cd-gitlab.md`**: rewritten and renamed to
+  `docs/gitlab-pipeline.md` — no longer a hybrid split; documents the MR
+  workflow, the sonar quality-gate gap, and the CI-minutes budget.
+- **`README.md` / dev-workflow docs**: updated for the MR-based flow.
 
-Out of scope: adding the `mirror-gitlab` job to `ci.yml` (GitHub-side edit, separate change), retiring GitHub-side SonarQube, and the remaining `package:*` build-strategy TODOs.
+Quality-gate note: SonarQube analysis leaves the pipeline with no PR-time
+static-analysis gate. Recorded as a known gap; options (SonarCloud, re-hosted
+SonarQube) are out of scope.
+
+Out of scope: SAST hardening to blocking, backend k8s manifests, web-harness
+rework, re-adding any external quality gate.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `gitlab-cd`: GitLab-side pipeline behavior — native SAST on the `main` mirror, secret handling without Vault, and the artifact/report contracts those jobs rely on.
-
-### Modified Capabilities
-
-None — no existing capabilities.
+- `gitlab-pipeline`: the single GitLab pipeline — CI jobs migrated from
+  GitHub, native SAST, Vault-free secrets, GitLab container registry, and the
+  MR-based development flow.
 
 ## Impact
 
-- **Files**: `.gitlab-ci.yml` (edit), `docs/hybrid-ci-github-cd-gitlab.md` (edit).
-- **Systems**: GitLab project settings — CI/CD variables (masked/protected) configured manually; `homelab`-tagged runner must be able to run SAST analyzer container images (docker or kubernetes executor).
-- **No impact**: Go/frontend code, Terraform, GitHub Actions workflows, k8s manifests.
+- **Files**: `.gitlab-ci.yml` (rewrite), `.github/workflows/ci.yml` (delete),
+  `docs/hybrid-ci-github-cd-gitlab.md` → `docs/gitlab-pipeline.md` (rewrite +
+  rename), `README.md` (edit), dev-workflow docs (edit).
+- **Systems**: gitlab.com project settings — pull mirror, branch protection,
+  CI/CD variables (`KUBECONFIG`). GitHub repo keeps existing contents;
+  workflows removed.
+- **CI budget**: ~15–20 min/pipeline × ~20/month ≈ 300 min; SAST + package on
+  top approaches the 400-minute free pool — `workflow.rules` scoping and
+  caching are conditions for operation, not optimizations.
