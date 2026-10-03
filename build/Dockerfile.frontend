@@ -1,0 +1,5 @@
+# Static Expo web bundle (built by package:frontend-export into dist/)
+# served by the non-root nginx image (uid 101, listens 8080) — same base
+# the k8s web-harness uses.
+FROM docker.io/nginxinc/nginx-unprivileged:alpine
+COPY dist /usr/share/nginx/html

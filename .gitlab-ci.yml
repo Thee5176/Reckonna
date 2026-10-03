@@ -1,44 +1,73 @@
+---
 # =============================================================================
 # Reckonna CD — GitLab side of the hybrid split.
 #   CI (tests/lint/sonar/gitleaks) stays on GitHub Actions. Green CI there is
-#   the quality gate. This file is CD ONLY: package + deploy to homelab k3s.
+#   the quality gate. This file runs CD (package + deploy to homelab k3s)
+#   plus one GitLab-native analysis stage: SAST.
 #   Trigger: GitHub `mirror-gitlab` job push-mirrors main here AFTER CI green.
-#   No tests run here. Do not add them — that duplicates GitHub CI.
-# Secrets policy (.claude/rules/secrets-vault.md): NO secrets in this file.
-#   Runner pulls kubeconfig / registry creds from Vault at job runtime:
-#     vault kv get -mount=secret app/reckonna/<key>
+#   No test suites run here — that duplicates GitHub CI. SAST is the only
+#   exception: it analyzes (Go, TS/JS, k8s manifests) and reports to the
+#   GitLab Security Dashboard, but never blocks delivery (advisory).
+# Secrets policy: NO secrets in this file. Repo-wide rule
+#   (.claude/rules/secrets-vault.md) is Vault-only; while Vault is down the
+#   GitLab side deviates (documented in docs/gitlab-pipeline.md):
+#   secrets arrive as masked+protected CI/CD variables (KUBECONFIG, file
+#   type). No functional Vault step remains in this pipeline.
 # =============================================================================
 
 workflow:
   rules:
-    # Mirror lands as a branch push. Pipelines for main ONLY — blocks tags,
-    # MRs, schedules, and stray branch pushes from doubling up.
+    # Two kinds of pipeline, nothing else: main pushes (the pull mirror lands
+    # here) and merge-request pipelines (the CI gate before merge). Blocks
+    # tags, schedules, and stray branch pushes — also the CI-minutes budget
+    # lever (docs/gitlab-pipeline.md).
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
 
 stages:
+  - test      # native SAST, advisory — findings land in the Security Dashboard
   - package   # build shippable artifacts (backend OCI image, frontend bundle)
   - deploy    # ship to homelab k3s
 
+# SAST override: the template cannot know local runner facts.
+sast:
+  stage: test
+  tags: [homelab]
+  allow_failure: true   # advisory mode — a red analyzer never blocks delivery
+
 variables:
-  # --- registry: TODO(you) — GitLab built-in ($CI_REGISTRY) or ghcr.io ---
+  # Registry decision (docs/gitlab-pipeline.md): GitLab built-in
+  # container registry. Package jobs authenticate with $CI_JOB_TOKEN —
+  # automatic, job-scoped, no extra CI/CD variables.
   IMAGE_REGISTRY: "$CI_REGISTRY"
-  BACKEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/backend"
+  COMMAND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/command"
+  QUERY_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/query"
   FRONTEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/frontend"
   # Mirror keeps full history; SHA is the deploy contract with GitHub CI.
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
 # -----------------------------------------------------------------------------
 # BACKEND — Go 1.23, two services: cmd/command + cmd/query
+# Build strategy (docs/gitlab-pipeline.md): buildah — rootless, no daemon,
+# natural fit for the homelab runner.
 # -----------------------------------------------------------------------------
 package:backend:
   stage: package
-  tags: [homelab]          # TODO(you): your runner's actual tag
-  image: golang:1.23       # TODO(you): swap if build strategy needs docker/buildah/kaniko image
+  tags: [homelab]
+  image: quay.io/buildah/stable
   script:
-    # TODO(you): build + push OCI image(s) for cmd/command and cmd/query.
-    # Decision to make (trade-offs in chat): dind vs buildah vs kaniko vs
-    # runner docker socket. Vault path for registry creds: TODO(you).
-    - echo "package:backend — write me"
+    # Registry auth is automatic: CI_JOB_TOKEN is accepted by the project's
+    # own container registry — job-scoped, no extra CI/CD variables.
+    - |
+      buildah login -u "$CI_REGISTRY_USER" \
+        --password "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    - buildah build -t "$COMMAND_IMAGE:$IMAGE_TAG" -f build/Dockerfile.command .
+    - buildah build -t "$QUERY_IMAGE:$IMAGE_TAG" -f build/Dockerfile.query .
+    - buildah push "$COMMAND_IMAGE:$IMAGE_TAG"
+    - buildah push "$QUERY_IMAGE:$IMAGE_TAG"
 
 deploy:backend:
   stage: deploy
@@ -48,23 +77,48 @@ deploy:backend:
   # kustomize apply may stay automated — uncomment for a human gate anyway:
   # when: manual
   script:
-    # TODO(you): pull kubeconfig from Vault, then apply the reckonna-app base:
-    #   kubectl kustomize infra/k8s/reckonna-app | kubectl apply -f -
-    # Image tag comes from $IMAGE_TAG (or set via kustomize edit set image).
-    - echo "deploy:backend — write me"
+    # Kubeconfig = file-type CI/CD variable (masked + protected, created in
+    # project settings). $KUBECONFIG expands to the file path — no base64,
+    # no fetch step.
+    - export KUBECONFIG="$KUBECONFIG"
+    # TODO(you): backend Deployment/Service manifests for cmd/command and
+    # cmd/query don't exist under infra/k8s yet. Once they land:
+    #   cd infra/k8s/reckonna-app
+    #   kustomize edit set image backend="$COMMAND_IMAGE:$IMAGE_TAG" \
+    #     backend-query="$QUERY_IMAGE:$IMAGE_TAG"
+    #   kubectl kustomize . | kubectl apply -f -
+    #   kubectl -n reckonna-app rollout status deploy/backend --timeout=120s
+    - echo "deploy:backend — waiting on backend k8s manifests"
 
 # -----------------------------------------------------------------------------
 # FRONTEND — React Native + Expo (web target consolidated from MUI app)
+# Artifact strategy (docs/gitlab-pipeline.md): `expo export` static bundle
+# → non-root nginx image. No EAS, no EXPO_TOKEN.
 # -----------------------------------------------------------------------------
-package:frontend:
+package:frontend-export:
   stage: package
   tags: [homelab]
   image: node:20
   script:
-    # TODO(you): pick artifact strategy — `npx expo export --platform web`
-    # (static bundle → nginx image or object storage) vs EAS build (cloud,
-    # needs EXPO_TOKEN from Vault). npm ci first either way.
-    - echo "package:frontend — write me"
+    - npm ci
+    - npx expo export --platform web --output-dir dist
+  artifacts:
+    paths: [dist]
+    expire_in: 1 week
+
+package:frontend-image:
+  stage: package
+  tags: [homelab]
+  image: quay.io/buildah/stable
+  needs: ["package:frontend-export"]
+  script:
+    - |
+      buildah login -u "$CI_REGISTRY_USER" \
+        --password "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    - |
+      buildah build \
+        -t "$FRONTEND_IMAGE:$IMAGE_TAG" -f build/Dockerfile.frontend .
+    - buildah push "$FRONTEND_IMAGE:$IMAGE_TAG"
 
 deploy:frontend:
   stage: deploy
@@ -72,6 +126,11 @@ deploy:frontend:
   image: bitnami/kubectl:1.31
   # when: manual           # optional human gate, same rule as backend
   script:
-    # TODO(you): apply infra/k8s base for the frontend (create one if absent),
-    # or upload exported bundle to its destination.
-    - echo "deploy:frontend — write me"
+    - export KUBECONFIG="$KUBECONFIG"
+    # TODO(you): the web-harness Deployment mounts configmap content, so an
+    # image override alone won't serve dist/. Rework the harness (or add a
+    # frontend Deployment) first, then:
+    #   cd infra/k8s/reckonna-app
+    #   kustomize edit set image reckonna-app="$FRONTEND_IMAGE:$IMAGE_TAG"
+    #   kubectl kustomize . | kubectl apply -f -
+    - echo "deploy:frontend — waiting on web-harness rework"
