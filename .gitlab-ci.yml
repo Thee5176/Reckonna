@@ -1,0 +1,77 @@
+# =============================================================================
+# Reckonna CD — GitLab side of the hybrid split.
+#   CI (tests/lint/sonar/gitleaks) stays on GitHub Actions. Green CI there is
+#   the quality gate. This file is CD ONLY: package + deploy to homelab k3s.
+#   Trigger: GitHub `mirror-gitlab` job push-mirrors main here AFTER CI green.
+#   No tests run here. Do not add them — that duplicates GitHub CI.
+# Secrets policy (.claude/rules/secrets-vault.md): NO secrets in this file.
+#   Runner pulls kubeconfig / registry creds from Vault at job runtime:
+#     vault kv get -mount=secret app/reckonna/<key>
+# =============================================================================
+
+workflow:
+  rules:
+    # Mirror lands as a branch push. Pipelines for main ONLY — blocks tags,
+    # MRs, schedules, and stray branch pushes from doubling up.
+    - if: $CI_COMMIT_BRANCH == "main"
+
+stages:
+  - package   # build shippable artifacts (backend OCI image, frontend bundle)
+  - deploy    # ship to homelab k3s
+
+variables:
+  # --- registry: TODO(you) — GitLab built-in ($CI_REGISTRY) or ghcr.io ---
+  IMAGE_REGISTRY: "$CI_REGISTRY"
+  BACKEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/backend"
+  FRONTEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/frontend"
+  # Mirror keeps full history; SHA is the deploy contract with GitHub CI.
+  IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+
+# -----------------------------------------------------------------------------
+# BACKEND — Go 1.23, two services: cmd/command + cmd/query
+# -----------------------------------------------------------------------------
+package:backend:
+  stage: package
+  tags: [homelab]          # TODO(you): your runner's actual tag
+  image: golang:1.23       # TODO(you): swap if build strategy needs docker/buildah/kaniko image
+  script:
+    # TODO(you): build + push OCI image(s) for cmd/command and cmd/query.
+    # Decision to make (trade-offs in chat): dind vs buildah vs kaniko vs
+    # runner docker socket. Vault path for registry creds: TODO(you).
+    - echo "package:backend — write me"
+
+deploy:backend:
+  stage: deploy
+  tags: [homelab]
+  image: bitnami/kubectl:1.31
+  # Devops rule: `terraform apply` + `kubectl delete` human-only.
+  # kustomize apply may stay automated — uncomment for a human gate anyway:
+  # when: manual
+  script:
+    # TODO(you): pull kubeconfig from Vault, then apply the reckonna-app base:
+    #   kubectl kustomize infra/k8s/reckonna-app | kubectl apply -f -
+    # Image tag comes from $IMAGE_TAG (or set via kustomize edit set image).
+    - echo "deploy:backend — write me"
+
+# -----------------------------------------------------------------------------
+# FRONTEND — React Native + Expo (web target consolidated from MUI app)
+# -----------------------------------------------------------------------------
+package:frontend:
+  stage: package
+  tags: [homelab]
+  image: node:20
+  script:
+    # TODO(you): pick artifact strategy — `npx expo export --platform web`
+    # (static bundle → nginx image or object storage) vs EAS build (cloud,
+    # needs EXPO_TOKEN from Vault). npm ci first either way.
+    - echo "package:frontend — write me"
+
+deploy:frontend:
+  stage: deploy
+  tags: [homelab]
+  image: bitnami/kubectl:1.31
+  # when: manual           # optional human gate, same rule as backend
+  script:
+    # TODO(you): apply infra/k8s base for the frontend (create one if absent),
+    # or upload exported bundle to its destination.
+    - echo "deploy:frontend — write me"
