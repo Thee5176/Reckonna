@@ -99,6 +99,10 @@ deploy:backend:
   # bitnami retired versioned kubectl tags (1.31/1.32/1.33 all 404 now);
   # latest is the only maintained tag.
   image: bitnami/kubectl:latest
+  # Deploy target exists only when a KUBECONFIG CI/CD variable is set (k3s
+  # is down; laptop k3s is the interim target). Without it, skip cleanly.
+  rules:
+    - if: $KUBECONFIG
   # Devops rule: `terraform apply` + `kubectl delete` human-only.
   # kustomize apply may stay automated — uncomment for a human gate anyway:
   # when: manual
@@ -157,6 +161,9 @@ deploy:frontend:
   stage: deploy
   tags: [homelab]
   image: bitnami/kubectl:latest
+  # Same skip rule as deploy:backend — no KUBECONFIG, no deploy.
+  rules:
+    - if: $KUBECONFIG
   # when: manual           # optional human gate, same rule as backend
   script:
     - export KUBECONFIG="$KUBECONFIG"
