@@ -96,7 +96,9 @@ package:backend:
 deploy:backend:
   stage: deploy
   tags: [homelab]
-  image: bitnami/kubectl:1.31
+  # bitnami retired versioned kubectl tags (1.31/1.32/1.33 all 404 now);
+  # latest is the only maintained tag.
+  image: bitnami/kubectl:latest
   # Devops rule: `terraform apply` + `kubectl delete` human-only.
   # kustomize apply may stay automated — uncomment for a human gate anyway:
   # when: manual
@@ -154,7 +156,7 @@ package:frontend-image:
 deploy:frontend:
   stage: deploy
   tags: [homelab]
-  image: bitnami/kubectl:1.31
+  image: bitnami/kubectl:latest
   # when: manual           # optional human gate, same rule as backend
   script:
     - export KUBECONFIG="$KUBECONFIG"
