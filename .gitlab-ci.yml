@@ -45,6 +45,112 @@ secret_detection:
   stage: test
   tags: [homelab]
 
+# -----------------------------------------------------------------------------
+# CI — migrated from .github/workflows/ci.yml (design D7). Runs on main + MR
+# pipelines (workflow.rules) before package. Same guard pattern as GitHub:
+# empty module -> skip, not red.
+# -----------------------------------------------------------------------------
+backend:
+  stage: test
+  tags: [homelab]
+  image: golang:1.23
+  script:
+    - |
+      if [ -z "$(go list ./... 2>/dev/null)" ]; then
+        echo "No Go packages yet — skipping build/test"
+        exit 0
+      fi
+    - go build ./...
+    - go test ./... -race
+
+backend-lint:
+  stage: test
+  tags: [homelab]
+  image: golangci/golangci-lint:v1.62.2
+  script:
+    - |
+      if [ -z "$(git ls-files '*.go')" ]; then
+        echo "No Go files yet — skipping lint"
+        exit 0
+      fi
+    - golangci-lint run ./...
+
+frontend:
+  stage: test
+  tags: [homelab]
+  image: node:20
+  variables:
+    npm_config_cache: .npm
+  script:
+    - npm ci || npm install
+    - npm test -- --watchAll=false --passWithNoTests
+
+e2e:
+  stage: test
+  tags: [homelab]
+  image: golang:1.23
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - |
+      if [ -z "$(go list -tags e2e ./e2e/... 2>/dev/null)" ]; then
+        echo "No e2e packages yet — skipping"
+        exit 0
+      fi
+    - go test -tags e2e ./e2e/... -count=1
+
+terraform:
+  stage: test
+  tags: [homelab]
+  image: hashicorp/terraform:1.9.8
+  script:
+    - terraform -chdir=infra init -backend=false
+    - terraform -chdir=infra fmt -check -recursive
+    - terraform -chdir=infra validate
+    # plan-02 cloudflare root — a separate module; -chdir=infra never sees it.
+    - terraform -chdir=infra/terraform init -backend=false
+    - terraform -chdir=infra/terraform fmt -check
+    - terraform -chdir=infra/terraform validate
+
+infra-manifests:
+  stage: test
+  tags: [homelab]
+  image: golang:1.23
+  script:
+    - |
+      go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.7
+      apt-get update -qq && apt-get install -y -qq shellcheck curl
+      curl -sLO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
+      install -m 0755 kubectl /usr/local/bin/kubectl
+      kubectl version --client
+    - |
+      set -o pipefail
+      for base in infra/k8s/postgres infra/k8s/tailscale \
+                  infra/k8s/reckonna-app infra/k8s/cloudflared; do
+        echo "== $base =="
+        kubectl kustomize "$base" | \
+          kubeconform -strict -ignore-missing-schemas -summary
+      done
+    - |
+      for t in tests/*_test.sh; do
+        echo "== $t =="
+        bash "$t"
+      done
+    - shellcheck -S warning scripts/tunnel-*.sh scripts/deploy.sh
+    - shellcheck -S warning tests/*_test.sh
+
+# Go module + npm caches — CI-minutes budget lever (design D11).
+cache:
+  - key:
+      files: [go.mod]
+    paths: [/go/pkg/mod]
+  - key:
+      files: [package-lock.json]
+    paths: [.npm]
+
 variables:
   # Registry decision (docs/gitlab-pipeline.md): GitLab built-in container
   # registry. Package jobs authenticate with $CI_JOB_TOKEN — automatic,
