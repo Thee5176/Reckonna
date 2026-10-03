@@ -46,13 +46,11 @@ secret_detection:
   tags: [homelab]
 
 variables:
-  # Registry decision (docs/gitlab-pipeline.md): GitLab built-in
-  # container registry. Package jobs authenticate with $CI_JOB_TOKEN —
-  # automatic, job-scoped, no extra CI/CD variables.
-  IMAGE_REGISTRY: "$CI_REGISTRY"
-  COMMAND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/command"
-  QUERY_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/query"
-  FRONTEND_IMAGE: "$CI_REGISTRY/$CI_PROJECT_PATH/frontend"
+  # Registry decision (docs/gitlab-pipeline.md): GitLab built-in container
+  # registry. Package jobs authenticate with $CI_JOB_TOKEN — automatic,
+  # job-scoped, no extra CI/CD variables. Destination paths are computed
+  # per-job: registry repositories are lowercase-only, so CI_PROJECT_PATH
+  # gets lowercased in the script.
   # Mirror keeps full history; SHA is the deploy contract with GitHub CI.
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
@@ -83,14 +81,17 @@ package:backend:
       cat > /kaniko/.docker/config.json <<EOF
       {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_JOB_TOKEN"}}}
       EOF
+    # Registry repositories are lowercase-only; CI_PROJECT_PATH preserves
+    # case (thee51761/Reckonna), so lowercase it here.
+    - REG_PATH="$(echo "$CI_PROJECT_PATH" | tr '[:upper:]' '[:lower:]')"
     - |
       /kaniko/executor --context . \
         --dockerfile build/Dockerfile.command \
-        --destination "$COMMAND_IMAGE:$IMAGE_TAG"
+        --destination "$CI_REGISTRY/$REG_PATH/command:$IMAGE_TAG"
     - |
       /kaniko/executor --context . \
         --dockerfile build/Dockerfile.query \
-        --destination "$QUERY_IMAGE:$IMAGE_TAG"
+        --destination "$CI_REGISTRY/$REG_PATH/query:$IMAGE_TAG"
 
 deploy:backend:
   stage: deploy
@@ -143,10 +144,12 @@ package:frontend-image:
       cat > /kaniko/.docker/config.json <<EOF
       {"auths":{"$CI_REGISTRY":{"username":"$CI_REGISTRY_USER","password":"$CI_JOB_TOKEN"}}}
       EOF
+    # Registry repositories are lowercase-only; see package:backend.
+    - REG_PATH="$(echo "$CI_PROJECT_PATH" | tr '[:upper:]' '[:lower:]')"
     - |
       /kaniko/executor --context . \
         --dockerfile build/Dockerfile.frontend \
-        --destination "$FRONTEND_IMAGE:$IMAGE_TAG"
+        --destination "$CI_REGISTRY/$REG_PATH/frontend:$IMAGE_TAG"
 
 deploy:frontend:
   stage: deploy
