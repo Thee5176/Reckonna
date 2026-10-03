@@ -66,10 +66,11 @@ variables:
 package:backend:
   stage: package
   tags: [homelab]
-  image: gcr.io/kaniko-project/executor:debug
   # kaniko's ENTRYPOINT is the executor binary; clear it so the runner's
   # shell can execute the script (the executor is called explicitly).
-  entrypoint: [""]
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   # Backend Go code isn't on this branch yet (cmd/command + cmd/query are
   # empty; code lives in the backend-03 worktree). Skip the job until it
   # lands — the pipeline stays green instead of building nothing.
@@ -131,10 +132,11 @@ package:frontend-export:
 package:frontend-image:
   stage: package
   tags: [homelab]
-  image: gcr.io/kaniko-project/executor:debug
   # kaniko's ENTRYPOINT is the executor binary; clear it so the runner's
   # shell can execute the script (the executor is called explicitly).
-  entrypoint: [""]
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   needs: ["package:frontend-export"]
   script:
     - |
