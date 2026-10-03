@@ -38,7 +38,7 @@ secret; gitlab.com's pull mirror replaces the push job.
 | Stage | Jobs |
 |-------|------|
 | `test` | CI jobs migrated from GitHub (backend, frontend, e2e, terraform, infra-manifests), SAST, Secret Detection |
-| `package` | `package:backend` (buildah → command + query images), `package:frontend-export` + `package:frontend-image` (expo export → nginx image) |
+| `package` | `package:backend` (kaniko → command + query images), `package:frontend-export` + `package:frontend-image` (expo export → nginx image) |
 | `deploy` | `deploy:backend`, `deploy:frontend` — kubeconfig from the `KUBECONFIG` file variable |
 
 CI job migration map (GitHub `ci.yml` → GitLab):

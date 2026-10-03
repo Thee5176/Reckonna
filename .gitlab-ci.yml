@@ -139,7 +139,6 @@ package:frontend-image:
       /kaniko/executor --context . \
         --dockerfile build/Dockerfile.frontend \
         --destination "$FRONTEND_IMAGE:$IMAGE_TAG"
-    - buildah push "$FRONTEND_IMAGE:$IMAGE_TAG"
 
 deploy:frontend:
   stage: deploy
