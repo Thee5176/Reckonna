@@ -7,7 +7,7 @@ The hybrid CI/CD split puts all CI (tests, lint, SonarQube, gitleaks) on GitHub 
 ## What Changes
 
 - **`.gitlab-ci.yml`**: add a `test` stage with GitLab native SAST (via the `Security/SAST.gitlab-ci.yml` template) that runs on every `main` mirror push before `package`. SAST findings are uploaded as job artifacts (`reports: sast`) and surface in GitLab's security dashboard. Analyzer coverage targets Go backend, TypeScript/JS frontend, and k8s manifests (kubesec).
-- **`.gitlab-ci.yml`**: replace all Vault-based secret sourcing with GitLab CI/CD variables — masked + protected project variables, file-type variable for kubeconfig. No secrets in the repo file. The deviation from the Vault-only rule is recorded in `docs/hybrid-ci-github-cd-gitlab.md`; `.claude/rules/secrets-vault.md` itself is not amended.
+- **`.gitlab-ci.yml`**: replace all Vault-based secret sourcing with GitLab CI/CD variables — masked + protected project variables, file-type variable for kubeconfig. Registry auth needs no variables at all: package jobs publish to the GitLab-native container registry (`$CI_REGISTRY`) with `CI_JOB_TOKEN`. No secrets in the repo file. The deviation from the Vault-only rule is recorded in `docs/hybrid-ci-github-cd-gitlab.md`; `.claude/rules/secrets-vault.md` itself is not amended.
 - **`.github/workflows/ci.yml`**: unchanged. The `sonar` + `sonar-gate` jobs stay as-is (PR-time analysis on GitHub remains SonarQube).
 - **`docs/hybrid-ci-github-cd-gitlab.md`**: update to describe the SAST stage and the Vault-deviation decision.
 

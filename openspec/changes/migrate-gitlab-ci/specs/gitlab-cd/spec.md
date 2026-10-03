@@ -47,6 +47,21 @@ The GitLab pipeline SHALL NOT depend on Vault for any secret. All secrets consum
 - **WHEN** `.gitlab-ci.yml` and the repository are scanned for credentials
 - **THEN** no secret values are present — only variable references such as `$KUBECONFIG` or `$CI_REGISTRY_PASSWORD`
 
+### Requirement: Packaged artifacts are published to the GitLab container registry
+
+The pipeline SHALL publish backend container images to the GitLab project's built-in container registry (GitLab-native, authenticated with `CI_JOB_TOKEN`) — not to an external registry. Deploy jobs SHALL reference images from that same registry.
+
+#### Scenario: Package job publishes to the GitLab registry
+
+- **WHEN** a `package` job completes on a `main` pipeline
+- **THEN** the backend image exists at `registry.gitlab.com/thee51761/reckonna/<image>:<commit-sha>`
+- **AND** no external registry credentials were required to push
+
+#### Scenario: Deploy references the GitLab registry image
+
+- **WHEN** a deploy job runs
+- **THEN** the image it deploys is pulled from the GitLab project container registry
+
 ### Requirement: GitHub CI is untouched by this change
 
 The change SHALL NOT modify `.github/workflows/ci.yml`; the GitHub `sonar` and `sonar-gate` jobs SHALL continue to run unchanged.
